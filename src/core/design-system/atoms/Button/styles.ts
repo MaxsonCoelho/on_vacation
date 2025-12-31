@@ -13,8 +13,8 @@ export const styles = StyleSheet.create({
   },
   text: {
     fontSize: theme.typography.fontSize.body,
-    fontWeight: theme.typography.weight.bold,
-    textTransform: 'uppercase',
+    fontWeight: theme.typography.weight.medium,
+    textAlign: 'center'
   },
 
 });
@@ -51,6 +51,17 @@ export const getVariantStyles = (variant: ButtonVariant, disabled: boolean) => {
         },
         text: {
           color: colors.primary,
+        },
+      };
+    case 'outline':
+      return {
+        container: {
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: colors.border,
+        },
+        text: {
+          color: colors.text.primary,
         },
       };
     case 'primary':

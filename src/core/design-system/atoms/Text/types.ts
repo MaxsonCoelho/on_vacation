@@ -1,7 +1,7 @@
 import { TextProps as NativeTextProps } from 'react-native';
 import { theme } from '../../tokens';
 
-export type TextVariant = 'title' | 'subtitle' | 'body' | 'caption' | 'label';
+export type TextVariant = 'h1' | 'h2' | 'h3' | 'title' | 'subtitle' | 'body' | 'caption' | 'label';
 
 // Helper type to get all nested color keys (e.g., 'primary' | 'text.primary' | 'status.error')
 type ColorKeys<T> = {

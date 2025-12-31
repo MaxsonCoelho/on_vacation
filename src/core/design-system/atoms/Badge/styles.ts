@@ -10,7 +10,7 @@ export const styles = StyleSheet.create({
   },
   text: {
     fontSize: theme.typography.fontSize.caption,
-    fontWeight: theme.typography.weight.medium as any,
+    fontWeight: theme.typography.weight.medium,
   },
   // Variants
   success: {

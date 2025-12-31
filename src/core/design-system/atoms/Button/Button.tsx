@@ -8,6 +8,8 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   loading = false,
   disabled = false,
+  fontSize,
+  textStyle,
   style,
   ...props
 }) => {
@@ -26,7 +28,9 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator color={variantStyles.text.color} />
       ) : (
-        <Text style={[styles.text, variantStyles.text]}>{title}</Text>
+        <Text style={[styles.text, variantStyles.text, fontSize ? { fontSize } : undefined, textStyle]}>
+          {title}
+        </Text>
       )}
     </TouchableOpacity>
   );

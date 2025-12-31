@@ -3,6 +3,23 @@ import { theme } from '../../tokens';
 import { TextVariant, ThemeColor } from './types';
 
 export const styles = StyleSheet.create({
+  h1: {
+    fontSize: theme.typography.fontSize.h1,
+    lineHeight: theme.typography.lineHeight.h1,
+    fontWeight: theme.typography.weight.bold,
+    letterSpacing: theme.typography.letterSpacing.tight,
+  },
+  h2: {
+    fontSize: theme.typography.fontSize.h2,
+    lineHeight: theme.typography.lineHeight.h2,
+    fontWeight: theme.typography.weight.bold,
+    letterSpacing: theme.typography.letterSpacing.tight,
+  },
+  h3: {
+    fontSize: theme.typography.fontSize.h3,
+    lineHeight: theme.typography.lineHeight.h3,
+    fontWeight: theme.typography.weight.semiBold,
+  },
   title: {
     fontSize: theme.typography.fontSize.title,
     lineHeight: theme.typography.lineHeight.title,
