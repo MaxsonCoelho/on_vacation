@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { RFValue } from 'react-native-responsive-fontsize';
 import { Text } from '../../atoms';
 import { HeaderTitleProps } from './types';
 import { styles, getAlignmentStyles } from './styles';
@@ -19,7 +20,7 @@ export const HeaderTitle: React.FC<HeaderTitleProps> = ({
         weight="bold"
         color="text.primary"
         numberOfLines={1}
-        style={{ textAlign: align }}
+        style={{ textAlign: align, fontSize: RFValue(18) }}
       >
         {title}
       </Text>

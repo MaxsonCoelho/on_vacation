@@ -1,15 +1,15 @@
 import React from 'react';
-import { View, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { HeaderTitle } from '../../../../core/design-system';
+import { HeaderTitle, HeaderBackButton } from '../../../../core/design-system';
+import { VacationHistoryScreen } from '../../../../features/dashboard/presentation/screens/VacationHistory/VacationHistoryScreen';
+import { VacationRequestDetailsScreen } from '../../../../features/dashboard/presentation/screens/VacationRequestDetails/VacationRequestDetailsScreen';
 
-const PlaceholderScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Minhas Férias (Em Breve)</Text>
-  </View>
-);
+export type VacationStackParamList = {
+  VacationHistory: undefined;
+  VacationRequestDetails: { id: string };
+};
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<VacationStackParamList>();
 
 export const VacationStack = () => {
   return (
@@ -22,11 +22,24 @@ export const VacationStack = () => {
       }}
     >
       <Stack.Screen 
-        name="VacationList" 
-        component={PlaceholderScreen} 
-        options={{
-            headerTitle: () => <HeaderTitle title="Minhas Férias" />,
-        }}
+        name="VacationHistory" 
+        component={VacationHistoryScreen} 
+        options={({ navigation }) => ({
+            headerTitle: () => <HeaderTitle title="Histórico de Férias" />,
+            headerLeft: () => (
+              <HeaderBackButton onPress={() => navigation.goBack()} />
+            ),
+        })}
+      />
+      <Stack.Screen 
+        name="VacationRequestDetails" 
+        component={VacationRequestDetailsScreen} 
+        options={({ navigation }) => ({
+            headerTitle: () => <HeaderTitle title="Detalhes da Solicitação" />,
+            headerLeft: () => (
+              <HeaderBackButton onPress={() => navigation.goBack()} />
+            ),
+        })}
       />
     </Stack.Navigator>
   );

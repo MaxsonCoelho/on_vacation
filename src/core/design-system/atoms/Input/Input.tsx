@@ -13,6 +13,8 @@ export const Input: React.FC<InputProps> = ({
   placeholder,
   rightIcon,
   onRightIconPress,
+  inputContainerStyle,
+  style,
   ...props
 }) => {
   const [focused, setFocused] = useState(false);
@@ -21,9 +23,9 @@ export const Input: React.FC<InputProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={[styles.inputContainer, inputStyles.container]}>
+      <View style={[styles.inputContainer, inputStyles.container, inputContainerStyle]}>
         <TextInput
-          style={[styles.input, inputStyles.input]}
+          style={[styles.input, inputStyles.input, style]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}

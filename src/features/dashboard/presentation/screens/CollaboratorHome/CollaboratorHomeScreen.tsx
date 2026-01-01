@@ -11,6 +11,9 @@ import {
 import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { HomeStackParamList } from '../../../../../app/navigation/collaborator/stacks/HomeStack';
 
 const recentRequests = [
   { 
@@ -35,6 +38,7 @@ const recentRequests = [
 
 export const CollaboratorHomeScreen = () => {
   const { user } = useAuthStore();
+  const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
 
   const getFirstName = (fullName?: string) => {
     return fullName?.split(' ')[0] || 'Colaborador';
@@ -71,7 +75,7 @@ export const CollaboratorHomeScreen = () => {
           <Button 
             title="Solicitar férias" 
             variant="primary" 
-            onPress={() => console.log('Solicitar férias')} 
+            onPress={() => navigation.navigate('RequestVacation')} 
           />
         </View>
 

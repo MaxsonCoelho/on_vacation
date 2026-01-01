@@ -8,4 +8,5 @@ export interface ButtonProps extends TouchableOpacityProps {
   loading?: boolean;
   fontSize?: number;
   textStyle?: StyleProp<TextStyle>;
+  leftIcon?: string;
 }
