@@ -40,10 +40,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       await logout();
-      set({ user: null, isLoading: false });
     } catch (error) {
-      set({ isLoading: false });
-      throw error;
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local state to ensure UI updates
+      set({ user: null, isLoading: false });
     }
   },
 

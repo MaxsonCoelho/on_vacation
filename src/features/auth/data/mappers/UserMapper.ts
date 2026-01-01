@@ -1,7 +1,7 @@
 import { User } from '../../domain/entities/User';
 
 export const UserMapper = {
-    toDomain: (id: string, email: string, name: string, role: string, status: string, created_at: string, avatar?: string): User => {
+    toDomain: (id: string, email: string, name: string, role: string, status: string, created_at: string, avatar?: string | null): User => {
         return {
             id,
             email,
@@ -9,7 +9,7 @@ export const UserMapper = {
             role: role as User['role'],
             status,
             created_at,
-            avatar
+            avatar: avatar || undefined
         };
     }
 };

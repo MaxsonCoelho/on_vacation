@@ -36,10 +36,23 @@ export const getSession = async () => {
 export const clearSession = async () => {
   try {
     const db = await getDBConnection();
-    await db.runAsync('DELETE FROM auth_session');
+    // Use execAsync for simple delete without parameters to avoid prepareAsync issues
+    await db.execAsync('DELETE FROM auth_session');
     console.log('[SQLite] Sessão limpa.');
   } catch (error) {
     console.error('[SQLite] Erro ao limpar sessão:', error);
     throw error;
   }
+};
+
+/**
+ * TEST ONLY: Resets the database to a clean state.
+ * This is used for integration testing to ensure isolation.
+ */
+export const _test_resetDB = async () => {
+  if (process.env.NODE_ENV !== 'test') {
+    console.warn('Attempted to reset DB outside of test environment');
+    return;
+  }
+  await clearSession();
 };
