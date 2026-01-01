@@ -8,10 +8,9 @@ export const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     paddingTop: theme.spacing.xs,
-    // Shadow for elevation
-    ...theme.shadows.md,
   },
   safeArea: {
     backgroundColor: theme.colors.surface,
+    flex: 0,
   },
 });

@@ -6,9 +6,9 @@ import { useAuthStore } from '../../features/auth/presentation/store/useAuthStor
 import { RoleSelectionScreen } from '../../features/auth/presentation/screens/RoleSelectionScreen/RoleSelectionScreen';
 import { LoginScreen } from '../../features/auth/presentation/screens/LoginScreen';
 import { ForgotPasswordScreen } from '../../features/auth/presentation/screens/ForgotPasswordScreen';
-import { GestorHomeScreen } from '../../features/dashboard/presentation/screens/GestorHome/GestorHomeScreen';
+import { ManagerHomeScreen } from '../../features/dashboard/presentation/screens/ManagerHome/ManagerHomeScreen';
 import { AdminHomeScreen } from '../../features/dashboard/presentation/screens/AdminHome/AdminHomeScreen';
-import { ColaboradorHomeScreen } from '../../features/dashboard/presentation/screens/ColaboradorHome/ColaboradorHomeScreen';
+import { CollaboratorNavigator } from './collaborator/CollaboratorNavigator';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -43,8 +43,8 @@ export const AppNavigator: React.FC = () => {
           <>
             {user.role === 'Gestor' && (
               <Stack.Screen 
-                name="GestorHome" 
-                component={GestorHomeScreen} 
+                name="ManagerHome" 
+                component={ManagerHomeScreen} 
               />
             )}
             {user.role === 'Administrador' && (
@@ -55,8 +55,9 @@ export const AppNavigator: React.FC = () => {
             )}
             {user.role === 'Colaborador' && (
               <Stack.Screen 
-                name="ColaboradorHome" 
-                component={ColaboradorHomeScreen} 
+                name="CollaboratorHome" 
+                component={CollaboratorNavigator} 
+                options={{ headerShown: false }}
               />
             )}
           </>

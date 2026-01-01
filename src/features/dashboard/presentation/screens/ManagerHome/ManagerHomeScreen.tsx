@@ -4,7 +4,7 @@ import { ScreenContainer, Text, Button } from '../../../../../core/design-system
 import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
 import { styles } from './styles';
 
-export const ColaboradorHomeScreen = () => {
+export const ManagerHomeScreen = () => {
   const { signOut } = useAuthStore();
 
   const handleLogout = async () => {
@@ -14,9 +14,9 @@ export const ColaboradorHomeScreen = () => {
   return (
     <ScreenContainer>
       <View style={styles.container}>
-        <Text variant="h2">Painel do Colaborador</Text>
+        <Text variant="h2">Painel do Gestor</Text>
         <Text variant="body" style={styles.description}>
-          Bem-vindo, Colaborador! Aqui você poderá solicitar e acompanhar suas férias.
+          Bem-vindo, Gestor! Aqui você poderá aprovar férias e gerenciar sua equipe.
         </Text>
         <Button title="Sair" onPress={handleLogout} variant="outline" />
       </View>

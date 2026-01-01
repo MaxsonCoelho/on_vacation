@@ -2,7 +2,7 @@ export type RootStackParamList = {
   RoleSelection: undefined;
   Login: { role: 'Colaborador' | 'Gestor' | 'Administrador' };
   ForgotPassword: { role: 'Colaborador' | 'Gestor' | 'Administrador' };
-  GestorHome: undefined;
+  ManagerHome: undefined;
   AdminHome: undefined;
-  ColaboradorHome: undefined;
+  CollaboratorHome: undefined;
 };
