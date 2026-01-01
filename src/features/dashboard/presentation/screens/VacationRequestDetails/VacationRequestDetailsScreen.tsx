@@ -48,7 +48,7 @@ export const VacationRequestDetailsScreen = () => {
   };
 
   return (
-    <ScreenContainer scrollable>
+    <ScreenContainer scrollable edges={['left', 'right']}>
       <View style={styles.container}>
         {/* Header Section */}
         <View style={styles.headerSection}>

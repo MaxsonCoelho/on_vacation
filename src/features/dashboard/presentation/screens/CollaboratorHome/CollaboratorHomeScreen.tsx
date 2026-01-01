@@ -45,7 +45,7 @@ export const CollaboratorHomeScreen = () => {
   };
 
   return (
-    <ScreenContainer scrollable>
+    <ScreenContainer scrollable edges={['left', 'right']}>
       <View style={styles.container}>
         {/* Greeting */}
         <View style={styles.greeting}>

@@ -1,36 +1,19 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Alert } from 'react-native';
 import { CollaboratorHomeScreen } from '../../../../features/dashboard/presentation/screens/CollaboratorHome/CollaboratorHomeScreen';
 import { RequestVacationScreen } from '../../../../features/dashboard/presentation/screens/RequestVacation/RequestVacationScreen';
+import { SettingsScreen } from '../../../../features/profile/presentation/screens/SettingsScreen';
 import { HeaderTitle, HeaderIconAction, HeaderBackButton } from '../../../../core/design-system';
-import { useAuthStore } from '../../../../features/auth/presentation/store/useAuthStore';
 
 export type HomeStackParamList = {
   CollaboratorHome: undefined;
   RequestVacation: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
 export const HomeStack: React.FC = () => {
-  const { signOut } = useAuthStore();
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Configurações',
-      'O que você deseja fazer?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Sair', 
-          style: 'destructive', 
-          onPress: signOut 
-        }
-      ]
-    );
-  };
-
   return (
     <Stack.Navigator
       screenOptions={{
@@ -43,16 +26,16 @@ export const HomeStack: React.FC = () => {
       <Stack.Screen 
         name="CollaboratorHome" 
         component={CollaboratorHomeScreen} 
-        options={{
+        options={({ navigation }) => ({
           headerShown: true,
           headerTitle: () => <HeaderTitle title="Início" />,
           headerRight: () => (
             <HeaderIconAction 
               icon="cog-outline" 
-              onPress={handleLogout} 
+              onPress={() => navigation.navigate('Settings')} 
             />
           ),
-        }}
+        })}
       />
       <Stack.Screen 
         name="RequestVacation" 
@@ -60,6 +43,17 @@ export const HomeStack: React.FC = () => {
         options={({ navigation }) => ({
           headerShown: true,
           headerTitle: () => <HeaderTitle title="Solicitar férias" />,
+          headerLeft: () => (
+            <HeaderBackButton onPress={() => navigation.goBack()} />
+          ),
+        })}
+      />
+      <Stack.Screen 
+        name="Settings" 
+        component={SettingsScreen} 
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: () => <HeaderTitle title="Configurações" />,
           headerLeft: () => (
             <HeaderBackButton onPress={() => navigation.goBack()} />
           ),

@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { User } from '../../domain/entities/User';
 import { authRepository } from '../../data/repositories/AuthRepositoryImpl';
-import { loginUseCase } from '../../useCases/LoginUseCase';
-import { logoutUseCase } from '../../useCases/LogoutUseCase';
-import { checkAuthStatusUseCase } from '../../useCases/CheckAuthStatusUseCase';
+import { loginUseCase } from '../../domain/useCases/LoginUseCase';
+import { logoutUseCase } from '../../domain/useCases/LogoutUseCase';
+import { checkAuthStatusUseCase } from '../../domain/useCases/CheckAuthStatusUseCase';
 
 // Instantiate use cases with the repository implementation
 const login = loginUseCase(authRepository);

@@ -67,7 +67,7 @@ export const VacationHistoryScreen = () => {
   };
 
   return (
-    <ScreenContainer scrollable={false} style={{ flex: 1 }}>
+    <ScreenContainer scrollable={false} style={{ flex: 1 }} edges={['left', 'right']}>
       <View style={styles.container}>
         <View>
             <ScrollView 

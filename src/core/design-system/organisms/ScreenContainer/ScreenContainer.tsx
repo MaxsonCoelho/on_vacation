@@ -10,6 +10,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   style,
   contentContainerStyle,
   scrollViewProps,
+  edges,
 }) => {
   const Content = (
     <View style={[styles.content, style]}>
@@ -18,7 +19,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   );
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeArea style={styles.container} edges={edges}>
       {scrollable ? (
         <ScrollView
           contentContainerStyle={[styles.scrollContent, contentContainerStyle]}

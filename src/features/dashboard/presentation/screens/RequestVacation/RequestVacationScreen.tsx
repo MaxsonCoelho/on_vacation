@@ -15,7 +15,7 @@ export const RequestVacationScreen = () => {
   const [observations, setObservations] = useState('');
 
   return (
-    <ScreenContainer scrollable>
+    <ScreenContainer scrollable edges={['left', 'right']}>
       <View style={styles.container}>
         <FormField
           placeholder="Data de início"

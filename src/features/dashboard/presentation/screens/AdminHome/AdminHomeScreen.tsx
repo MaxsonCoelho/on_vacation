@@ -12,7 +12,7 @@ export const AdminHomeScreen = () => {
   };
 
   return (
-    <ScreenContainer>
+    <ScreenContainer edges={['left', 'right']}>
       <View style={styles.container}>
         <Text variant="h2">Painel do Administrador</Text>
         <Text variant="body" style={styles.description}>
