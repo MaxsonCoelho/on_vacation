@@ -3,6 +3,7 @@ export * from './Alert';
 export * from './Dropdown';
 export * from './ModalContent';
 export * from './FormField';
+export * from './ControlledFormField/ControlledFormField';
 export * from './TabItem';
 export * from './ActionRow';
 export * from './StatusPill';

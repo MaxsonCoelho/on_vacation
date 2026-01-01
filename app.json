@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "on_vacation",
+    "name": "OnVacation",
     "slug": "on_vacation",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -30,6 +30,10 @@
     },
     "plugins": [
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "EXPO_PUBLIC_SUPABASE_URL": "https://milbmtxprwlgrtizrxwg.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_jZLKUowm3a2ltI2mZLN3Hw_ELsi4mPZ"
+    }
   }
 }

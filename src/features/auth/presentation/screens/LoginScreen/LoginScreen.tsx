@@ -1,20 +1,43 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity } from 'react-native';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { 
   ScreenContainer, 
   Text, 
-  Input, 
   Button, 
-  Spacer
+  Spacer,
+  FeedbackBottomSheet,
+  ControlledFormField
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { LoginScreenProps } from './types';
 import { theme } from '../../../../../core/design-system/tokens';
+import { useLoginViewModel } from '../../viewModel';
+import { loginSchema, LoginFormData } from '../../../domain/schemas/loginSchema';
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ route, navigation }) => {
   const { role } = route.params;
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const {
+    isLoading,
+    feedback,
+    closeFeedback,
+    handleLogin,
+  } = useLoginViewModel();
+
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  const { control, handleSubmit } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  const onSubmit = (data: LoginFormData) => {
+    handleLogin(role, data.email, data.password);
+  };
 
   // Determine button styles based on role
   const getButtonProps = () => {
@@ -68,26 +91,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ route, navigation }) =
         </Text>
 
         <View style={styles.form}>
-          <Input
+          <ControlledFormField
+            control={control}
+            name="email"
             placeholder="E-mail"
-            value={email}
-            onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
           
-          <Input
+          <ControlledFormField
+            control={control}
+            name="password"
             placeholder="Senha"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!isPasswordVisible}
+            rightIcon={isPasswordVisible ? 'eye-off' : 'eye'}
+            onRightIconPress={() => setIsPasswordVisible(!isPasswordVisible)}
           />
 
           <Spacer size="md" />
 
           <Button
-            title="Entrar"
-            onPress={() => console.log('Login attempt', { role, email })}
+            title={isLoading ? "Carregando..." : "Entrar"}
+            onPress={handleSubmit(onSubmit)}
+            loading={isLoading}
             {...buttonProps}
           />
 
@@ -101,6 +127,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ route, navigation }) =
           </TouchableOpacity>
         </View>
       </View>
+
+      <FeedbackBottomSheet
+        visible={feedback.visible}
+        title={feedback.title}
+        description={feedback.description}
+        type={feedback.type}
+        primaryAction={feedback.primaryAction}
+        secondaryAction={feedback.secondaryAction}
+        onClose={closeFeedback}
+      />
     </ScreenContainer>
   );
 };

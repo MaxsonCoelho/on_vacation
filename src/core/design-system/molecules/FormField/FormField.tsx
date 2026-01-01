@@ -12,13 +12,15 @@ export const FormField: React.FC<FormFieldProps> = ({
 }) => {
   return (
     <View style={[styles.container, containerStyle]}>
-      <Text
-        variant="label"
-        color={error ? 'status.error' : 'text.primary'}
-        style={styles.label}
-      >
-        {label}
-      </Text>
+      {label && (
+        <Text
+          variant="label"
+          color={error ? 'status.error' : 'text.primary'}
+          style={styles.label}
+        >
+          {label}
+        </Text>
+      )}
       
       <Input
         error={error}

@@ -9,7 +9,7 @@ import {
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../../../navigation/types';
+import { RootStackParamList } from '../../../../../app/navigation/types';
 import { theme } from '../../../../../core/design-system/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;

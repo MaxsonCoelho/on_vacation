@@ -7,3 +7,4 @@ export * from './BottomTabBar';
 export * from './ScreenContainer';
 export * from './ProfileHeader';
 export * from './ApprovalActionBar';
+export * from './FeedbackBottomSheet';

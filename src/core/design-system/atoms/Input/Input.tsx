@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { TextInput, View, Text } from 'react-native';
+import { TextInput, View, Text, TouchableOpacity } from 'react-native';
 import { theme } from '../../tokens';
 import { InputProps } from './types';
 import { styles, getInputStyles } from './styles';
+import { Icon } from '../Icon/Icon';
 
 export const Input: React.FC<InputProps> = ({
   value,
@@ -10,6 +11,8 @@ export const Input: React.FC<InputProps> = ({
   error,
   disabled = false,
   placeholder,
+  rightIcon,
+  onRightIconPress,
   ...props
 }) => {
   const [focused, setFocused] = useState(false);
@@ -30,6 +33,19 @@ export const Input: React.FC<InputProps> = ({
           onBlur={() => setFocused(false)}
           {...props}
         />
+        {rightIcon && (
+          <TouchableOpacity
+            onPress={onRightIconPress}
+            disabled={!onRightIconPress || disabled}
+            style={styles.iconContainer}
+          >
+            <Icon
+              name={rightIcon}
+              size={theme.typography.fontSize.subtitle}
+              color={error ? 'status.error' : 'text.secondary'}
+            />
+          </TouchableOpacity>
+        )}
       </View>
       {!!error && <Text style={styles.errorText}>{error}</Text>}
     </View>

@@ -20,6 +20,9 @@ export const styles = StyleSheet.create({
     color: theme.colors.text.primary,
     height: '100%',
   },
+  iconContainer: {
+    marginLeft: theme.spacing.sm,
+  },
   errorText: {
     marginTop: theme.spacing.xs,
     fontSize: theme.typography.fontSize.caption,
