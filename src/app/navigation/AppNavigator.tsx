@@ -6,8 +6,8 @@ import { useAuthStore } from '../../features/auth/presentation/store/useAuthStor
 import { RoleSelectionScreen } from '../../features/auth/presentation/screens/RoleSelectionScreen/RoleSelectionScreen';
 import { LoginScreen } from '../../features/auth/presentation/screens/LoginScreen';
 import { ForgotPasswordScreen } from '../../features/auth/presentation/screens/ForgotPasswordScreen';
-import { ManagerHomeScreen } from '../../features/dashboard/presentation/screens/ManagerHome/ManagerHomeScreen';
-import { AdminHomeScreen } from '../../features/dashboard/presentation/screens/AdminHome/AdminHomeScreen';
+import { ManagerHomeScreen } from '../../features/manager/presentation/screens/ManagerHome/ManagerHomeScreen';
+import { AdminHomeScreen } from '../../features/admin/presentation/screens/AdminHome/AdminHomeScreen';
 import { CollaboratorNavigator } from './collaborator/CollaboratorNavigator';
 import { RootStackParamList } from './types';
 

@@ -8,12 +8,14 @@ type ControlledFormFieldProps<T extends FieldValues> = Omit<FormFieldProps, 'val
   control: Control<T>;
   name: Path<T>;
   rules?: RegisterOptions<T, Path<T>>;
+  mask?: (value: string) => string;
 };
 
 export const ControlledFormField = <T extends FieldValues>({
   control,
   name,
   rules,
+  mask,
   ...props
 }: ControlledFormFieldProps<T>) => {
   return (
@@ -25,7 +27,10 @@ export const ControlledFormField = <T extends FieldValues>({
         <FormField
           {...props}
           value={value}
-          onChangeText={onChange}
+          onChangeText={(text) => {
+            const maskedText = mask ? mask(text) : text;
+            onChange(maskedText);
+          }}
           onBlur={onBlur}
           error={error?.message}
         />

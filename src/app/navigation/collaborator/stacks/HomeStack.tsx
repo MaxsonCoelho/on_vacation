@@ -1,8 +1,8 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { CollaboratorHomeScreen } from '../../../../features/dashboard/presentation/screens/CollaboratorHome/CollaboratorHomeScreen';
-import { RequestVacationScreen } from '../../../../features/dashboard/presentation/screens/RequestVacation/RequestVacationScreen';
-import { SettingsScreen } from '../../../../features/profile/presentation/screens/SettingsScreen';
+import { CollaboratorHomeScreen } from '../../../../features/collaborator/presentation/screens/CollaboratorHome/CollaboratorHomeScreen';
+import { RequestVacationScreen } from '../../../../features/collaborator/presentation/screens/RequestVacation/RequestVacationScreen';
+import { SettingsScreen } from '../../../../features/collaborator/presentation/screens/SettingsScreen';
 import { HeaderTitle, HeaderIconAction, HeaderBackButton } from '../../../../core/design-system';
 
 export type HomeStackParamList = {
