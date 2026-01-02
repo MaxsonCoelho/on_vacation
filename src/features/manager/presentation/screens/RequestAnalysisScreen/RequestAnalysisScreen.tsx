@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, ActivityIndicator, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ManagerRequestsStackParamList } from '../../../../../app/navigation/manager/stacks/ManagerRequestsStack';
 import { 
@@ -7,7 +7,9 @@ import {
   Text, 
   Avatar, 
   ApprovalActionBar,
-  Spacer
+  Spacer,
+  Toast,
+  ToastProps
 } from '../../../../../core/design-system';
 import { theme } from '../../../../../core/design-system/tokens';
 import { styles } from './styles';
@@ -19,30 +21,57 @@ type Props = NativeStackScreenProps<ManagerRequestsStackParamList, 'RequestAnaly
 export const RequestAnalysisScreen: React.FC<Props> = ({ navigation, route }) => {
   const { id } = route.params;
   const { requests, approveRequest, rejectRequest, isLoading } = useManagerStore();
+  const [toast, setToast] = useState<ToastProps>({
+    visible: false,
+    message: '',
+    variant: 'success',
+  });
 
   const request = requests.find(r => r.id === id);
 
   const handleApprove = async () => {
     try {
         await approveRequest(id, 'Aprovado pelo gestor');
-        Alert.alert('Sucesso', 'Solicitação aprovada com sucesso!', [
-            { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        setToast({
+          visible: true,
+          message: 'Solicitação aprovada com sucesso!',
+          variant: 'success',
+          onDismiss: () => {
+            setToast(prev => ({ ...prev, visible: false }));
+            navigation.goBack();
+          }
+        });
     } catch (error) {
         console.error(error);
-        Alert.alert('Erro', 'Não foi possível aprovar a solicitação.');
+        setToast({
+          visible: true,
+          message: 'Não foi possível aprovar a solicitação.',
+          variant: 'error',
+          onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
+        });
     }
   };
 
   const handleReject = async () => {
     try {
         await rejectRequest(id, 'Reprovado pelo gestor');
-        Alert.alert('Sucesso', 'Solicitação reprovada com sucesso!', [
-            { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        setToast({
+          visible: true,
+          message: 'Solicitação reprovada com sucesso!',
+          variant: 'success',
+          onDismiss: () => {
+            setToast(prev => ({ ...prev, visible: false }));
+            navigation.goBack();
+          }
+        });
     } catch (error) {
         console.error(error);
-        Alert.alert('Erro', 'Não foi possível reprovar a solicitação.');
+        setToast({
+          visible: true,
+          message: 'Não foi possível reprovar a solicitação.',
+          variant: 'error',
+          onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
+        });
     }
   };
 
@@ -122,6 +151,13 @@ export const RequestAnalysisScreen: React.FC<Props> = ({ navigation, route }) =>
             }}
           />
       )}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        variant={toast.variant}
+        duration={1500}
+        onDismiss={toast.onDismiss}
+      />
     </View>
   );
 };
