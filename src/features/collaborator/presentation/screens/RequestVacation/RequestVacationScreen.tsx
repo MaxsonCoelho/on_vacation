@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,7 +9,9 @@ import {
   Text, 
   Button, 
   Spacer,
-  ControlledFormField
+  ControlledFormField,
+  Dialog,
+  DialogAction
 } from '../../../../../core/design-system';
 import { dateMask } from '../../../../../core/utils';
 import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
@@ -58,6 +60,13 @@ export const RequestVacationScreen = () => {
   const navigation = useNavigation();
   const { user } = useAuthStore();
   const { createRequest, isLoading } = useVacationStore();
+  
+  const [dialog, setDialog] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    actions?: DialogAction[];
+  }>({ visible: false, title: '', message: '' });
 
   const { control, handleSubmit } = useForm<VacationFormData>({
     resolver: zodResolver(vacationSchema),
@@ -84,71 +93,96 @@ export const RequestVacationScreen = () => {
 
       console.log('[RequestVacation] Request created successfully');
 
-      Alert.alert(
-        'Sucesso',
-        'Solicitação enviada com sucesso!',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      setDialog({
+        visible: true,
+        title: 'Sucesso',
+        message: 'Solicitação enviada com sucesso!',
+        actions: [{ 
+          text: 'OK', 
+          onPress: () => {
+            setDialog(prev => ({ ...prev, visible: false }));
+            navigation.goBack();
+          } 
+        }]
+      });
     } catch (error) {
       console.error('[RequestVacation] Error creating request:', error);
-      Alert.alert('Erro', 'Não foi possível enviar a solicitação. Tente novamente.');
+      setDialog({
+        visible: true,
+        title: 'Erro',
+        message: 'Não foi possível enviar a solicitação. Tente novamente.',
+        actions: [{ 
+          text: 'OK', 
+          onPress: () => setDialog(prev => ({ ...prev, visible: false })),
+          variant: 'outline'
+        }]
+      });
     }
   };
 
   return (
-    <ScreenContainer scrollable edges={['left', 'right']}>
-      <View style={styles.container}>
-        <View style={styles.form}>
-          <ControlledFormField
-            control={control}
-            name="startDate"
-            placeholder="Data de início"
-            keyboardType="numeric"
-            maxLength={10}
-            rightIcon="calendar-blank"
-            mask={dateMask}
-          />
-          
-          <Spacer size="md" />
+    <>
+      <ScreenContainer scrollable edges={['left', 'right']}>
+        <View style={styles.container}>
+          <View style={styles.form}>
+            <ControlledFormField
+              control={control}
+              name="startDate"
+              placeholder="Data de início"
+              keyboardType="numeric"
+              maxLength={10}
+              rightIcon="calendar-blank"
+              mask={dateMask}
+            />
+            
+            <Spacer size="md" />
 
-          <ControlledFormField
-            control={control}
-            name="endDate"
-            placeholder="Data de término"
-            keyboardType="numeric"
-            maxLength={10}
-            rightIcon="calendar-blank"
-            mask={dateMask}
-          />
+            <ControlledFormField
+              control={control}
+              name="endDate"
+              placeholder="Data de término"
+              keyboardType="numeric"
+              maxLength={10}
+              rightIcon="calendar-blank"
+              mask={dateMask}
+            />
 
-          <Spacer size="md" />
+            <Spacer size="md" />
 
-          <ControlledFormField
-            control={control}
-            name="reason"
-            placeholder="Observações (opcional)"
-            multiline
-            numberOfLines={4}
-            inputContainerStyle={styles.textAreaContainer}
-            style={styles.textAreaInput}
-          />
-          
-          <Spacer size="xs" />
-          <Text variant="caption" color="text.secondary">
-            Mínimo de 5 dias de férias.
-          </Text>
+            <ControlledFormField
+              control={control}
+              name="reason"
+              placeholder="Observações (opcional)"
+              multiline
+              numberOfLines={4}
+              inputContainerStyle={styles.textAreaContainer}
+              style={styles.textAreaInput}
+            />
+            
+            <Spacer size="xs" />
+            <Text variant="caption" color="text.secondary">
+              Mínimo de 5 dias de férias.
+            </Text>
 
-          <Spacer size="xl" />
+            <Spacer size="xl" />
 
-          <Button 
-            title="Enviar solicitação" 
-            onPress={handleSubmit(onSubmit)} 
-            variant="primary"
-            loading={isLoading}
-            disabled={isLoading}
-          />
+            <Button 
+              title="Enviar solicitação" 
+              onPress={handleSubmit(onSubmit)} 
+              variant="primary"
+              loading={isLoading}
+              disabled={isLoading}
+            />
+          </View>
         </View>
-      </View>
-    </ScreenContainer>
+      </ScreenContainer>
+      <Dialog
+        visible={dialog.visible}
+        title={dialog.title}
+        message={dialog.message}
+        actions={dialog.actions}
+        onClose={() => setDialog(prev => ({ ...prev, visible: false }))}
+      />
+    </>
   );
 };

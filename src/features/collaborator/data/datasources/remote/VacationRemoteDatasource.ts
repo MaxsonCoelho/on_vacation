@@ -50,15 +50,20 @@ export const getRequestsRemote = async (userId: string): Promise<VacationRequest
 };
 
 export const createRequestRemote = async (
-  request: Omit<VacationRequest, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'managerNotes'>
+  request: Partial<VacationRequest>
 ): Promise<void> => {
+  if (!request.userId || !request.title || !request.startDate || !request.endDate) {
+    throw new Error('Missing required fields');
+  }
+
   const payload = {
+    id: request.id, // Send local ID if exists
     user_id: request.userId,
     title: request.title,
     start_date: new Date(request.startDate.split('/').reverse().join('-')), // Convert DD/MM/YYYY to YYYY-MM-DD
     end_date: new Date(request.endDate.split('/').reverse().join('-')),
     collaborator_notes: request.collaboratorNotes,
-    status: 'pending',
+    status: request.status || 'pending',
   };
 
   console.log('[RemoteDatasource] Creating request payload:', JSON.stringify(payload));

@@ -1,5 +1,6 @@
-export * from './Card';
 export * from './Alert';
+export * from './Dialog';
+export * from './Card';
 export * from './Dropdown';
 export * from './ModalContent';
 export * from './FormField';

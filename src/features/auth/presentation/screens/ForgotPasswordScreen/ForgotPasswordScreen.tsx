@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, Alert } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { 
   ScreenContainer, 
   Text, 
   Input, 
   Button, 
-  Spacer
+  Spacer,
+  Dialog,
+  DialogAction
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -17,6 +19,12 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
 export const ForgotPasswordScreen: React.FC<Props> = ({ route, navigation }) => {
   const { role } = route.params;
   const [email, setEmail] = useState('');
+  const [dialog, setDialog] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    actions?: DialogAction[];
+  }>({ visible: false, title: '', message: '' });
 
   const getButtonProps = () => {
     switch (role) {
@@ -49,15 +57,23 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ route, navigation }) => 
   const handleSendResetLink = () => {
     // Mock logic for sending reset link
     console.log('Reset link sent to', email);
-    Alert.alert(
-      'E-mail enviado',
-      'Verifique sua caixa de entrada para redefinir sua senha.',
-      [{ text: 'OK', onPress: () => navigation.goBack() }]
-    );
+    setDialog({
+      visible: true,
+      title: 'E-mail enviado',
+      message: 'Verifique sua caixa de entrada para redefinir sua senha.',
+      actions: [{ 
+        text: 'OK', 
+        onPress: () => {
+          setDialog(prev => ({ ...prev, visible: false }));
+          navigation.goBack();
+        } 
+      }]
+    });
   };
 
   return (
-    <ScreenContainer scrollable>
+    <>
+      <ScreenContainer scrollable>
       <View style={styles.content}>
         <Text variant="h2" weight="bold" style={styles.title}>
           Recuperar Senha
@@ -94,6 +110,14 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ route, navigation }) => 
           />
         </View>
       </View>
-    </ScreenContainer>
+      </ScreenContainer>
+      <Dialog
+        visible={dialog.visible}
+        title={dialog.title}
+        message={dialog.message}
+        actions={dialog.actions}
+        onClose={() => setDialog(prev => ({ ...prev, visible: false }))}
+      />
+    </>
   );
 };
