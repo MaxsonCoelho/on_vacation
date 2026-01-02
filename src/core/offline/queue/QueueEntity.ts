@@ -1,6 +1,6 @@
 export type SyncStatus = 'pending' | 'processing' | 'failed' | 'completed';
 
-export interface QueueItem<T = any> {
+export interface QueueItem<T = unknown> {
   id: string;
   type: string;
   payload: T;

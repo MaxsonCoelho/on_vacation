@@ -4,6 +4,15 @@ import { QueueItem, SyncStatus } from './QueueEntity';
 // Helper para evitar SQL Injection em strings interpoladas manualmente
 const escape = (str: string) => str.replace(/'/g, "''");
 
+interface QueueItemDB {
+  id: string;
+  type: string;
+  payload: string;
+  created_at: number;
+  retry_count: number;
+  status: string;
+}
+
 export const QueueRepository = {
   add: async (item: QueueItem) => {
     const db = await getDatabase();
@@ -29,7 +38,7 @@ export const QueueRepository = {
       []
     );
 
-    return (result as any[]).map(row => ({
+    return (result as QueueItemDB[]).map(row => ({
       id: row.id,
       type: row.type,
       payload: JSON.parse(row.payload),
