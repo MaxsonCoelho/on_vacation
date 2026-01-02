@@ -10,6 +10,7 @@ import {
 } from '../../../../../core/design-system';
 import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
 import { useVacationStore } from '../../store/useVacationStore';
+import { useProfileStore } from '../../store/useProfileStore';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -22,20 +23,24 @@ type HomeNavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 export const CollaboratorHomeScreen = () => {
   const { user } = useAuthStore();
   const { requests, isLoading, fetchRequests } = useVacationStore();
+  const { profile, fetchProfile } = useProfileStore();
   const navigation = useNavigation<HomeNavigationProp>();
 
   useFocusEffect(
     useCallback(() => {
       if (user?.id) {
         fetchRequests(user.id);
+        fetchProfile(user.id);
       }
-    }, [user?.id, fetchRequests])
+    }, [user?.id, fetchRequests, fetchProfile])
   );
 
   const getFirstName = (fullName?: string) => {
     return fullName?.split(' ')[0] || 'Colaborador';
   };
 
+  console.log('[CollaboratorHome] Requests in store:', requests.length);
+  
   const totalRequests = requests.length;
   const pendingRequests = requests.filter((r: VacationRequest) => r.status === 'pending').length;
   const recentRequests = requests.slice(0, 3);
@@ -56,7 +61,7 @@ export const CollaboratorHomeScreen = () => {
         {/* Greeting */}
         <View style={styles.greeting}>
           <Text variant="h1" weight="bold">
-            Olá, {getFirstName(user?.name)}
+            Olá, {getFirstName(profile?.name || user?.name)}
           </Text>
         </View>
 

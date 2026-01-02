@@ -26,32 +26,44 @@ export const getRequestsRemote = async (userId: string): Promise<VacationRequest
     throw new Error(error.message);
   }
 
+  console.log('[RemoteDatasource] Raw data received:', data?.length);
+
   // Map DB columns to Entity
-  return (data as VacationRequestDB[]).map((item) => ({
-    id: item.id,
-    userId: item.user_id,
-    title: item.title,
-    startDate: new Date(item.start_date).toLocaleDateString('pt-BR'),
-    endDate: new Date(item.end_date).toLocaleDateString('pt-BR'),
-    status: item.status as VacationStatus,
-    collaboratorNotes: item.collaborator_notes,
-    managerNotes: item.manager_notes,
-    createdAt: item.created_at,
-    updatedAt: item.updated_at,
-  }));
+  return (data as VacationRequestDB[]).map((item) => {
+    // Manually parse date string to avoid timezone issues
+    const [startYear, startMonth, startDay] = item.start_date.split('-');
+    const [endYear, endMonth, endDay] = item.end_date.split('-');
+    
+    return {
+      id: item.id,
+      userId: item.user_id,
+      title: item.title,
+      startDate: `${startDay}/${startMonth}/${startYear}`,
+      endDate: `${endDay}/${endMonth}/${endYear}`,
+      status: item.status as VacationStatus,
+      collaboratorNotes: item.collaborator_notes,
+      managerNotes: item.manager_notes,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    };
+  });
 };
 
 export const createRequestRemote = async (
   request: Omit<VacationRequest, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'managerNotes'>
 ): Promise<void> => {
-  const { error } = await supabase.from('vacation_requests').insert({
+  const payload = {
     user_id: request.userId,
     title: request.title,
     start_date: new Date(request.startDate.split('/').reverse().join('-')), // Convert DD/MM/YYYY to YYYY-MM-DD
     end_date: new Date(request.endDate.split('/').reverse().join('-')),
     collaborator_notes: request.collaboratorNotes,
     status: 'pending',
-  });
+  };
+
+  console.log('[RemoteDatasource] Creating request payload:', JSON.stringify(payload));
+
+  const { error } = await supabase.from('vacation_requests').insert(payload);
 
   if (error) {
     console.error('Error creating vacation request:', error);

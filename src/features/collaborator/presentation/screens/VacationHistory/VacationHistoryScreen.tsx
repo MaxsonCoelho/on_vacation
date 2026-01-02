@@ -28,6 +28,7 @@ export const VacationHistoryScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
+      console.log('[VacationHistory] Focus effect triggered');
       if (user?.id) {
         fetchRequests(user.id);
       }
@@ -43,6 +44,7 @@ export const VacationHistoryScreen = () => {
   }, [user?.id, fetchRequests]);
 
   const getFilteredRequests = () => {
+    console.log('[VacationHistory] Filtering requests. Total:', requests.length, 'Filter:', activeFilter);
     if (activeFilter === 'Todos') return requests;
     
     const statusMap: Record<string, string> = {
@@ -51,7 +53,8 @@ export const VacationHistoryScreen = () => {
       'Reprovadas': 'rejected'
     };
 
-    return requests.filter(req => req.status === statusMap[activeFilter]);
+    const filtered = requests.filter(req => req.status === statusMap[activeFilter]);
+    return filtered;
   };
 
   const filteredRequests = getFilteredRequests();

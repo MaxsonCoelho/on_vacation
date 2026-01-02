@@ -11,17 +11,10 @@ import {
   Spacer,
   ControlledFormField
 } from '../../../../../core/design-system';
+import { dateMask } from '../../../../../core/utils';
 import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
 import { useVacationStore } from '../../store/useVacationStore';
 import { styles } from './styles';
-
-const dateMask = (value: string) => {
-  return value
-    .replace(/\D/g, '')
-    .replace(/^(\d{2})(\d)/, '$1/$2')
-    .replace(/^(\d{2})\/(\d{2})(\d)/, '$1/$2/$3')
-    .substr(0, 10);
-};
 
 const parseDate = (dateStr: string) => {
   const [day, month, year] = dateStr.split('/').map(Number);
@@ -76,7 +69,9 @@ export const RequestVacationScreen = () => {
   });
 
   const onSubmit = async (data: VacationFormData) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      return;
+    }
 
     try {
       await createRequest({
@@ -87,12 +82,15 @@ export const RequestVacationScreen = () => {
         collaboratorNotes: data.reason,
       });
 
+      console.log('[RequestVacation] Request created successfully');
+
       Alert.alert(
         'Sucesso',
         'Solicitação enviada com sucesso!',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
-    } catch {
+    } catch (error) {
+      console.error('[RequestVacation] Error creating request:', error);
       Alert.alert('Erro', 'Não foi possível enviar a solicitação. Tente novamente.');
     }
   };

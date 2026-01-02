@@ -17,13 +17,17 @@ export const useVacationStore = create<VacationState>((set) => ({
   isLoading: false,
   error: null,
   fetchRequests: async (userId: string) => {
+    console.log('[useVacationStore] Fetching requests for user:', userId);
     set({ isLoading: true, error: null });
     try {
       const getRequests = getVacationRequestsUseCase(VacationRepositoryImpl);
       const requests = await getRequests(userId);
+      console.log('[useVacationStore] Fetched requests count:', requests.length);
       set({ requests, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[useVacationStore] Error fetching requests:', error);
+      set({ error: errorMessage, isLoading: false });
     }
   },
   createRequest: async (request) => {
@@ -31,13 +35,15 @@ export const useVacationStore = create<VacationState>((set) => ({
     try {
       const create = createVacationRequestUseCase(VacationRepositoryImpl);
       await create(request);
+      
       set({ isLoading: false });
       // Refresh requests after creation
       const getRequests = getVacationRequestsUseCase(VacationRepositoryImpl);
       const requests = await getRequests(request.userId);
       set({ requests });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      set({ error: errorMessage, isLoading: false });
       throw error;
     }
   },

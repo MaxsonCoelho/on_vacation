@@ -46,6 +46,11 @@ export const ProfileScreen = () => {
     vacationPeriodEnd: ''
   };
 
+  // Ensure fields have defaults if null
+  const department = userDisplay.department || 'Tecnologia';
+  const admissionDate = userDisplay.admissionDate || '01/01/2023';
+  const displayEmail = userDisplay.email || authUser?.email || '';
+
   return (
     <ScreenContainer scrollable edges={['left', 'right']}>
       <ProfileHeader
@@ -58,17 +63,17 @@ export const ProfileScreen = () => {
       <ListSection title="Informações Pessoais">
         <View style={styles.infoRow}>
           <Text variant="body" color="text.secondary">E-mail</Text>
-          <Text variant="body" style={{ fontSize: RFValue(12) }}>{userDisplay.email}</Text>
+          <Text variant="body" style={{ fontSize: RFValue(12) }}>{displayEmail}</Text>
         </View>
         <Spacer size="sm" />
         <View style={styles.infoRow}>
           <Text variant="body" color="text.secondary">Setor</Text>
-          <Text variant="body" style={{ fontSize: RFValue(12) }}>{userDisplay.department}</Text>
+          <Text variant="body" style={{ fontSize: RFValue(12) }}>{department}</Text>
         </View>
         <Spacer size="sm" />
         <View style={styles.infoRow}>
           <Text variant="body" color="text.secondary">Admissão</Text>
-          <Text variant="body" style={{ fontSize: RFValue(12) }}>{userDisplay.admissionDate}</Text>
+          <Text variant="body" style={{ fontSize: RFValue(12) }}>{admissionDate}</Text>
         </View>
       </ListSection>
     </ScreenContainer>
