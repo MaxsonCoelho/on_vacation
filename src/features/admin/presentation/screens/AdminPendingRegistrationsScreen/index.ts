@@ -1,0 +1,2 @@
+export { AdminPendingRegistrationsScreen } from './AdminPendingRegistrationsScreen';
+

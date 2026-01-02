@@ -26,15 +26,27 @@ export const loginRemote = async (email: string, password: string): Promise<User
     }
 
     // Validar se o usuário está ativo (aprovado)
-    const userStatus = userProfile.status || 'active';
-    if (userStatus !== 'active') {
+    // Normaliza o status: remove espaços e converte para lowercase para comparação
+    const rawStatus = (userProfile.status || 'active').trim().toLowerCase();
+    const isActive = rawStatus === 'active';
+    
+    console.log('[AuthRemote] User status check:', {
+        userId: data.user.id,
+        email: data.user.email,
+        rawStatus: userProfile.status,
+        normalizedStatus: rawStatus,
+        isActive,
+        role: userProfile.role
+    });
+    
+    if (!isActive) {
         // Faz logout para limpar a sessão
         await supabase.auth.signOut();
         
-        if (userStatus === 'pending') {
+        if (rawStatus === 'pending') {
             throw new Error('Seu cadastro está pendente de aprovação. Aguarde a aprovação do administrador.');
         } else {
-            throw new Error('Seu cadastro não está ativo. Entre em contato com o administrador.');
+            throw new Error(`Seu cadastro não está ativo (status: ${userProfile.status}). Entre em contato com o administrador.`);
         }
     }
 
@@ -43,7 +55,7 @@ export const loginRemote = async (email: string, password: string): Promise<User
         data.user.email,
         userProfile.name || '',
         userProfile.role,
-        userStatus,
+        'active', // Sempre retorna 'active' quando passa na validação
         userProfile.created_at || new Date().toISOString(),
         userProfile.avatar_url
     );

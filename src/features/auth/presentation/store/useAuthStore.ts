@@ -28,9 +28,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const user = await login(email, password);
-      set({ user, isLoading: false });
+      console.log('[AuthStore] signIn - User logged in:', { id: user.id, email: user.email, role: user.role, status: user.status });
+      set({ user, isLoading: false, isInitialized: true });
       return user;
     } catch (error) {
+      console.log('[AuthStore] signIn - Error:', error);
       set({ isLoading: false });
       throw error;
     }
@@ -49,12 +51,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
+    console.log('[AuthStore] checkAuth - Starting check...');
     set({ isLoading: true });
     try {
       const user = await checkAuthStatus();
+      console.log('[AuthStore] checkAuth - Result:', user ? { id: user.id, email: user.email, role: user.role, status: user.status } : null);
       set({ user, isLoading: false, isInitialized: true });
     } catch (error) {
-      console.log('Check auth error:', error);
+      console.log('[AuthStore] checkAuth - Error:', error);
       set({ user: null, isLoading: false, isInitialized: true });
     }
   },

@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { 
   ScreenContainer, 
   Text, 
@@ -8,8 +10,12 @@ import {
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
+import { AdminHomeStackParamList } from '../../../../../app/navigation/admin/stacks/AdminHomeStack';
+
+type NavigationProp = NativeStackNavigationProp<AdminHomeStackParamList>;
 
 export const AdminHomeScreen = () => {
+  const navigation = useNavigation<NavigationProp>();
   return (
     <ScreenContainer scrollable edges={['left', 'right']}>
       <View style={styles.container}>
@@ -50,7 +56,10 @@ export const AdminHomeScreen = () => {
           Ações rápidas
         </Text>
 
-        <TouchableOpacity activeOpacity={0.7}>
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('PendingRegistrations')}
+        >
           <Card style={styles.actionCard} padding="md">
             <View style={styles.actionContent}>
               <View style={styles.actionTextContainer}>
@@ -76,7 +85,16 @@ export const AdminHomeScreen = () => {
 
         <Spacer size="md" />
 
-        <TouchableOpacity activeOpacity={0.7}>
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          onPress={() => {
+            // Navega para a tab de usuários
+            const parentNavigation = navigation.getParent();
+            if (parentNavigation) {
+              parentNavigation.navigate('Users');
+            }
+          }}
+        >
           <Card style={styles.actionCard} padding="md">
             <View style={styles.actionContent}>
               <View style={styles.actionTextContainer}>

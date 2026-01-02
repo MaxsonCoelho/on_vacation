@@ -1,6 +1,9 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { AdminHomeStack } from './stacks/AdminHomeStack';
+import { AdminUsersStack } from './stacks/AdminUsersStack';
+import { AdminReportsStack } from './stacks/AdminReportsStack';
+import { AdminProfileStack } from './stacks/AdminProfileStack';
 import { GenericBottomTabBar, GenericTabConfig } from '../../../core/design-system/organisms/BottomTabBar/GenericBottomTabBar';
 
 const Tab = createBottomTabNavigator();
@@ -9,7 +12,7 @@ const tabsConfig: GenericTabConfig[] = [
   { name: 'Home', icon: 'home', label: 'Início' },
   { name: 'Users', icon: 'account-multiple', label: 'Usuários' },
   { name: 'Reports', icon: 'chart-line', label: 'Relatórios' },
-  { name: 'Settings', icon: 'cog-outline', label: 'Configurações' },
+  { name: 'Profile', icon: 'account-outline', label: 'Perfil' },
 ];
 
 export const AdminNavigator = () => {
@@ -27,18 +30,18 @@ export const AdminNavigator = () => {
       />
       <Tab.Screen 
         name="Users" 
-        component={AdminHomeStack} 
+        component={AdminUsersStack} 
         options={{ tabBarLabel: 'Usuários' }}
       />
       <Tab.Screen 
         name="Reports" 
-        component={AdminHomeStack} 
+        component={AdminReportsStack} 
         options={{ tabBarLabel: 'Relatórios' }}
       />
       <Tab.Screen 
-        name="Settings" 
-        component={AdminHomeStack} 
-        options={{ tabBarLabel: 'Configurações' }}
+        name="Profile" 
+        component={AdminProfileStack} 
+        options={{ tabBarLabel: 'Perfil' }}
       />
     </Tab.Navigator>
   );

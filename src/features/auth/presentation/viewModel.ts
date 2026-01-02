@@ -32,13 +32,20 @@ export const useLoginViewModel = () => {
     try {
       const user = await signIn(email, password);
       
+      console.log('[LoginViewModel] Role validation:', {
+        selectedRole: role,
+        userRole: user.role,
+        match: user.role === role
+      });
+      
       if (user.role !== role) {
+        console.log('[LoginViewModel] Role mismatch, signing out...');
         await signOut();
         setFeedback({
           visible: true,
           type: 'error',
           title: 'Perfil incorreto',
-          description: `Este usuário não possui permissão de ${role}. Por favor, entre com um usuário válido ou troque o perfil de acesso.`,
+          description: `Este usuário não possui permissão de ${role}. O usuário logado tem permissão de ${user.role}. Por favor, entre com um usuário válido ou troque o perfil de acesso.`,
           primaryAction: {
             label: "Trocar perfil",
             onPress: () => {
@@ -53,6 +60,8 @@ export const useLoginViewModel = () => {
         });
         return;
       }
+      
+      console.log('[LoginViewModel] Login successful for role:', role);
       
     } catch (error: unknown) {
       let errorMessage = 'Ocorreu um erro ao tentar fazer login.';

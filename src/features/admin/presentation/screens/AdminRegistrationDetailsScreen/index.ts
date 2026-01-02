@@ -1,0 +1,2 @@
+export { AdminRegistrationDetailsScreen } from './AdminRegistrationDetailsScreen';
+
