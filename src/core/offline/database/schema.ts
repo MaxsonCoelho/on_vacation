@@ -32,7 +32,9 @@ export const VACATION_REQUESTS_TABLE = `
     collaborator_notes TEXT,
     manager_notes TEXT,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    requester_name TEXT,
+    requester_avatar TEXT
   );
 `;
 

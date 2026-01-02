@@ -11,4 +11,6 @@ export interface VacationRequest {
   managerNotes?: string;
   createdAt: string;
   updatedAt: string;
+  requesterName?: string;
+  requesterAvatar?: string;
 }

@@ -1,3 +1,4 @@
+import { AUTH_SESSION_TABLE, SYNC_QUEUE_TABLE, VACATION_REQUESTS_TABLE } from '../offline/database/schema';
 import * as SQLite from 'expo-sqlite';
 
 const DB_NAME = 'on_vacation.db';
@@ -11,17 +12,10 @@ export const initDB = async () => {
     const db = await getDBConnection();
     // Para simplificar em ambiente de dev: Se a tabela não tiver as novas colunas, vamos recriá-la
     // Em produção, usaríamos migrations.
-    await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS auth_session (
-        id TEXT PRIMARY KEY NOT NULL,
-        email TEXT NOT NULL,
-        name TEXT NOT NULL,
-        role TEXT NOT NULL,
-        status TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        avatar TEXT
-      );
-    `);
+    await db.execAsync(AUTH_SESSION_TABLE);
+    await db.execAsync(SYNC_QUEUE_TABLE);
+    await db.execAsync(VACATION_REQUESTS_TABLE);
+    
     console.log('[SQLite] Banco de dados inicializado.');
   } catch (error) {
     console.error('[SQLite] Erro ao inicializar banco:', error);
