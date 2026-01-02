@@ -5,7 +5,7 @@ export const saveSession = async (id: string, email: string, name: string, role:
     const db = await getDBConnection();
     await db.runAsync(
       'INSERT OR REPLACE INTO auth_session (id, email, name, role, status, created_at, avatar) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, email, name, role, status, created_at, avatar || null]
+      [id, email, name, role, status, created_at, avatar || '']
     );
     console.log('[SQLite] Sessão salva.');
   } catch (error) {
