@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Image } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import { View, Image, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { 
   ScreenContainer, 
   Text, 
@@ -8,37 +9,41 @@ import {
   Spacer 
 } from '../../../../../core/design-system';
 import { styles } from './styles';
-
-// Dados estáticos para o protótipo
-const PENDING_REQUESTS = [
-  {
-    id: '1',
-    name: 'Carlos Pereira',
-    dateRange: '15/07/2024 - 29/07/2024',
-    avatarUrl: 'https://i.pravatar.cc/150?u=carlos',
-  },
-  {
-    id: '2',
-    name: 'Ana Souza',
-    dateRange: '22/07/2024 - 05/08/2024',
-    avatarUrl: 'https://i.pravatar.cc/150?u=ana',
-  },
-  {
-    id: '3',
-    name: 'Ricardo Almeida',
-    dateRange: '29/07/2024 - 12/08/2024',
-    avatarUrl: 'https://i.pravatar.cc/150?u=ricardo',
-  },
-];
+import { useManagerStore } from '../../store/useManagerStore';
+import { theme } from '../../../../../core/design-system/tokens';
 
 export const ManagerHomeScreen = () => {
-  return (
-    <ScreenContainer scrollable edges={['left', 'right']}>
+  const { profile, requests, isLoading, fetchProfile, fetchRequests, subscribeToRealtime, unsubscribeFromRealtime } = useManagerStore();
+
+  useEffect(() => {
+    subscribeToRealtime();
+    return () => unsubscribeFromRealtime();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+      fetchRequests('Pendentes');
+    }, [])
+  );
+
+  const pendingRequests = requests.filter(r => r.status === 'pending');
+
+ if (isLoading && !profile) {
+         return (
+            <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+               <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+         );
+      }
+      
+      return (
+        <ScreenContainer scrollable edges={['left', 'right']}>
       <View style={styles.container}>
         {/* Saudação */}
         <View style={styles.greeting}>
           <Text variant="h1" weight="bold">
-            Olá, Sr. Silva
+            Olá, {profile?.name || 'Gestor'}
           </Text>
         </View>
 
@@ -56,7 +61,7 @@ export const ManagerHomeScreen = () => {
               Solicitações Pendentes
             </Text>
             <Text variant="body" style={styles.bannerDescription}>
-              Você tem 3 solicitações de férias aguardando sua aprovação.
+              Você tem {pendingRequests.length} solicitações de férias aguardando sua aprovação.
             </Text>
           </View>
         </Card>
@@ -68,23 +73,27 @@ export const ManagerHomeScreen = () => {
           </Text>
 
           <View style={styles.listContainer}>
-            {PENDING_REQUESTS.slice(0, 3).map((request) => (
-              <View key={request.id} style={styles.listItem}>
-                <Avatar 
-                  source={request.avatarUrl} 
-                  size="md"
-                  initials={request.name.split(' ').map(n => n[0]).join('')} 
-                />
-                <View style={styles.userInfo}>
-                  <Text variant="body" weight="bold" style={styles.userName}>
-                    {request.name}
-                  </Text>
-                  <Text variant="caption" style={styles.dateRange}>
-                    {request.dateRange}
-                  </Text>
-                </View>
-              </View>
-            ))}
+            {pendingRequests.length === 0 ? (
+                 <Text variant="body" style={{ color: theme.colors.text.secondary, marginTop: 10 }}>Nenhuma solicitação pendente.</Text>
+            ) : (
+                pendingRequests.slice(0, 3).map((request) => (
+                  <View key={request.id} style={styles.listItem}>
+                    <Avatar 
+                      source={request.employeeAvatarUrl} 
+                      size="md"
+                      initials={request.employeeName.split(' ').map(n => n[0]).join('')} 
+                    />
+                    <View style={styles.userInfo}>
+                      <Text variant="body" weight="bold" style={styles.userName}>
+                        {request.employeeName}
+                      </Text>
+                      <Text variant="caption" style={styles.dateRange}>
+                        {request.startDate} - {request.endDate}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+            )}
           </View>
         </View>
 

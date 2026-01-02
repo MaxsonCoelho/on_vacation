@@ -1,5 +1,5 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { 
   ScreenContainer, 
   ProfileHeader, 
@@ -9,16 +9,31 @@ import {
   Button
 } from '../../../../../core/design-system';
 import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
+import { useManagerStore } from '../../store/useManagerStore';
 import { styles } from './styles';
+import { theme } from '../../../../../core/design-system/tokens';
 
 export const ManagerProfileScreen = () => {
-  const { user, signOut } = useAuthStore();
+  const { signOut } = useAuthStore();
+  const { profile, fetchProfile, isLoading } = useManagerStore();
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  if (isLoading && !profile) {
+      return (
+         <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+         </View>
+      );
+  }
 
   const userDisplay = {
-    name: user?.name || 'Gestor',
-    role: user?.role || 'Gestor',
-    email: user?.email || '',
-    avatar: undefined,
+    name: profile?.name || 'Gestor',
+    role: profile?.role ? 'Gestor' : 'Gestor', // Force 'Gestor' display
+    email: profile?.email || '',
+    avatar: profile?.avatarUrl,
   };
 
   return (

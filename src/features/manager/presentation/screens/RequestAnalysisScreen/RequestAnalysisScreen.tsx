@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, ActivityIndicator, Alert } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ManagerRequestsStackParamList } from '../../../../../app/navigation/manager/stacks/ManagerRequestsStack';
 import { 
@@ -11,36 +11,55 @@ import {
 } from '../../../../../core/design-system';
 import { theme } from '../../../../../core/design-system/tokens';
 import { styles } from './styles';
+import { useManagerStore } from '../../store/useManagerStore';
 
 type Props = NativeStackScreenProps<ManagerRequestsStackParamList, 'RequestAnalysis'>;
 
-// Dados mockados para simulação
-const MOCK_REQUEST_DETAILS = {
-  id: '1',
-  name: 'Lucas Oliveira',
-  role: 'Analista de Marketing',
-  avatarUrl: 'https://i.pravatar.cc/150?u=lucas',
-  dateRange: '01/07/2024 - 10/07/2024',
-  duration: '10 dias',
-  observations: 'Nenhuma observação',
-};
-
 export const RequestAnalysisScreen: React.FC<Props> = ({ navigation, route }) => {
   const { id } = route.params;
+  const { requests, approveRequest, rejectRequest, isLoading } = useManagerStore();
 
-  // Em um cenário real, buscaríamos os detalhes pelo ID
-  // const request = useRequestDetails(id);
-  const request = MOCK_REQUEST_DETAILS; 
+  const request = requests.find(r => r.id === id);
 
-  const handleApprove = () => {
-    console.log('Aprovado:', id);
-    navigation.goBack();
+  const handleApprove = async () => {
+    try {
+        await approveRequest(id, 'Aprovado pelo gestor');
+        Alert.alert('Sucesso', 'Solicitação aprovada com sucesso!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+    } catch (error) {
+        console.error(error);
+        Alert.alert('Erro', 'Não foi possível aprovar a solicitação.');
+    }
   };
 
-  const handleReject = () => {
-    console.log('Reprovado:', id);
-    navigation.goBack();
+  const handleReject = async () => {
+    try {
+        await rejectRequest(id, 'Reprovado pelo gestor');
+        Alert.alert('Sucesso', 'Solicitação reprovada com sucesso!', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+    } catch (error) {
+        console.error(error);
+        Alert.alert('Erro', 'Não foi possível reprovar a solicitação.');
+    }
   };
+
+  if (!request) {
+      return (
+          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+              <Text variant="body">Solicitação não encontrada.</Text>
+          </View>
+      );
+  }
+
+  if (isLoading) {
+       return (
+          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+             <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+       );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -51,17 +70,17 @@ export const RequestAnalysisScreen: React.FC<Props> = ({ navigation, route }) =>
         </Text>
         <View style={styles.requesterContainer}>
           <Avatar 
-            source={request.avatarUrl} 
+            source={request.employeeAvatarUrl} 
             size="lg" 
-            initials={request.name.split(' ').map(n => n[0]).join('')}
+            initials={request.employeeName.split(' ').map(n => n[0]).join('')}
           />
           <View style={styles.requesterInfo}>
             <Text variant="body" weight="bold">
-              {request.name}
+              {request.employeeName}
             </Text>
-            <Text variant="body" style={styles.requesterRole}>
+            {/* <Text variant="body" style={styles.requesterRole}>
               {request.role}
-            </Text>
+            </Text> */}
           </View>
         </View>
 
@@ -71,11 +90,11 @@ export const RequestAnalysisScreen: React.FC<Props> = ({ navigation, route }) =>
         </Text>
         <View style={styles.periodContainer}>
           <Text variant="body">
-            {request.dateRange}
+            {request.startDate} - {request.endDate}
           </Text>
-          <Text variant="body" style={styles.durationText}>
+          {/* <Text variant="body" style={styles.durationText}>
             {request.duration}
-          </Text>
+          </Text> */}
         </View>
 
         {/* Observações */}
@@ -84,29 +103,24 @@ export const RequestAnalysisScreen: React.FC<Props> = ({ navigation, route }) =>
         </Text>
         <View style={styles.observationsContainer}>
           <Text variant="body" color="text.secondary">
-            {request.observations}
+            {request.notes || 'Nenhuma observação'}
           </Text>
         </View>
         
         <Spacer size="xl" />
       </ScreenContainer>
 
-      <ApprovalActionBar 
-        onApprove={handleApprove}
-        onReject={handleReject}
-        approveLabel="Aprovar"
-        rejectLabel="Reprovar"
-        approveButtonProps={{
-          style: { backgroundColor: theme.colors.brand.manager },
-          textStyle: { color: '#FFFFFF' },
-        }}
-        style={{
-          paddingHorizontal: theme.spacing.md,
-          paddingTop: theme.spacing.md,
-          paddingBottom: theme.spacing.sm,
-          borderTopWidth: 0,
-        }}
-      />
+      {request.status === 'pending' && (
+          <ApprovalActionBar 
+            onApprove={handleApprove}
+            onReject={handleReject}
+            approveLabel="Aprovar"
+            rejectLabel="Reprovar"
+            approveButtonProps={{
+              style: { backgroundColor: theme.colors.brand.manager },
+            }}
+          />
+      )}
     </View>
   );
 };

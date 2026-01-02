@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, FlatList, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useCallback } from 'react';
+import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ManagerRequestsStackParamList } from '../../../../../app/navigation/manager/stacks/ManagerRequestsStack';
+import { FlashList } from '@shopify/flash-list';
 import { 
   ScreenContainer, 
   Text, 
@@ -11,38 +12,22 @@ import {
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
+import { useManagerStore } from '../../store/useManagerStore';
 
 const FILTERS = ['Todas', 'Pendentes', 'Aprovadas', 'Reprovadas'];
-
-const REQUESTS = [
-  {
-    id: '1',
-    name: 'Carlos Pereira',
-    dateRange: '15/07/2024 - 29/07/2024',
-    avatarUrl: 'https://i.pravatar.cc/150?u=carlos',
-    status: 'approved',
-  },
-  {
-    id: '2',
-    name: 'Ana Souza',
-    dateRange: '22/07/2024 - 05/08/2024',
-    avatarUrl: 'https://i.pravatar.cc/150?u=ana',
-    status: 'approved',
-  },
-  {
-    id: '3',
-    name: 'Ricardo Almeida',
-    dateRange: '29/07/2024 - 12/08/2024',
-    avatarUrl: 'https://i.pravatar.cc/150?u=ricardo',
-    status: 'approved',
-  },
-];
 
 type NavigationProp = NativeStackNavigationProp<ManagerRequestsStackParamList, 'ManagerRequests'>;
 
 export const ManagerRequestsScreen = () => {
   const [activeFilter, setActiveFilter] = useState('Todas');
   const navigation = useNavigation<NavigationProp>();
+  const { requests, isLoading, fetchRequests } = useManagerStore();
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchRequests(activeFilter);
+    }, [activeFilter])
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -57,6 +42,14 @@ export const ManagerRequestsScreen = () => {
     }
   };
 
+  if (isLoading && requests.length === 0) {
+      return (
+         <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+         </View>
+      );
+  }
+
   return (
     <ScreenContainer scrollable={false} style={{ flex: 1 }} edges={['left', 'right']}>
       <View style={styles.container}>
@@ -66,37 +59,45 @@ export const ManagerRequestsScreen = () => {
           onSelectFilter={setActiveFilter}
         />
 
-        <FlatList
-          data={REQUESTS}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.requestItem}
-              onPress={() => navigation.navigate('RequestAnalysis', { id: item.id })}
-            >
-              <Avatar 
-                source={item.avatarUrl} 
-                size="lg"
-                initials={item.name.split(' ').map(n => n[0]).join('')} 
-              />
-              <View style={styles.requestInfo}>
-                <Text variant="body" weight="bold" style={styles.userName}>
-                  {item.name}
-                </Text>
-                <Text variant="body" style={styles.dateRange}>
-                  {item.dateRange}
-                </Text>
-              </View>
-              <View 
-                style={[
-                  styles.statusDot, 
-                  { backgroundColor: getStatusColor(item.status) }
-                ]} 
-              />
-            </TouchableOpacity>
-          )}
-        />
+        <View style={{ flex: 1 }}>
+            <FlashList<import('../../../domain/entities/TeamRequest').TeamRequest>
+              data={requests}
+              estimatedItemSize={80}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContainer}
+              ListEmptyComponent={
+                  <View style={{ alignItems: 'center', marginTop: 50 }}>
+                      <Text variant="body" color="text.secondary">Nenhuma solicitação encontrada.</Text>
+                  </View>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={styles.requestItem}
+                  onPress={() => navigation.navigate('RequestAnalysis', { id: item.id })}
+                >
+                  <Avatar 
+                    source={item.employeeAvatarUrl} 
+                    size="lg"
+                    initials={item.employeeName.split(' ').map(n => n[0]).join('')} 
+                  />
+                  <View style={styles.requestInfo}>
+                    <Text variant="body" weight="bold" style={styles.userName}>
+                      {item.employeeName}
+                    </Text>
+                    <Text variant="body" style={styles.dateRange}>
+                      {item.startDate} - {item.endDate}
+                    </Text>
+                  </View>
+                  <View 
+                    style={[
+                      styles.statusDot, 
+                      { backgroundColor: getStatusColor(item.status) }
+                    ]} 
+                  />
+                </TouchableOpacity>
+              )}
+            />
+        </View>
       </View>
     </ScreenContainer>
   );
