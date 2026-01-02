@@ -5,16 +5,13 @@ import {
   ProfileHeader, 
   Text, 
   Spacer,
-  ListSection,
-  Button
+  ListSection
 } from '../../../../../core/design-system';
-import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
 import { useManagerStore } from '../../store/useManagerStore';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
 
 export const ManagerProfileScreen = () => {
-  const { signOut } = useAuthStore();
   const { profile, fetchProfile, isLoading } = useManagerStore();
 
   useEffect(() => {
@@ -51,16 +48,6 @@ export const ManagerProfileScreen = () => {
           <Text variant="body">{userDisplay.email}</Text>
         </View>
       </ListSection>
-
-      <Spacer size="xl" />
-      
-      <View style={styles.logoutContainer}>
-        <Button 
-          title="Sair" 
-          variant="outline" 
-          onPress={signOut}
-        />
-      </View>
     </ScreenContainer>
   );
 };

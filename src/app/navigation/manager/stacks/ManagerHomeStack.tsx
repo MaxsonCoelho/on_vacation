@@ -1,12 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ManagerHomeScreen } from '../../../../features/manager/presentation/screens';
+import { ManagerHomeScreen, SettingsScreen } from '../../../../features/manager/presentation/screens';
 import { HeaderTitle, HeaderIconAction, HeaderBackButton } from '../../../../core/design-system';
-
-// Por enquanto vamos reutilizar a SettingsScreen do colaborador ou criar uma específica para o manager futuramente
-// Vamos usar placeholder por enquanto para não quebrar
-import { View } from 'react-native';
-const PlaceholderScreen = () => <View />;
 
 export type ManagerHomeStackParamList = {
   ManagerHome: undefined;
@@ -41,7 +36,7 @@ export const ManagerHomeStack: React.FC = () => {
       />
       <Stack.Screen 
         name="Settings" 
-        component={PlaceholderScreen} 
+        component={SettingsScreen} 
         options={({ navigation }) => ({
           headerShown: true,
           headerTitle: () => <HeaderTitle title="Configurações" />,

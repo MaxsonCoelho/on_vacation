@@ -5,13 +5,12 @@ import {
   ScreenContainer, 
   Text, 
   Card, 
-  Avatar, 
-  Spacer 
+  Spacer,
+  TeamRequestListItem
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { useManagerStore } from '../../store/useManagerStore';
 import { theme } from '../../../../../core/design-system/tokens';
-import { formatDate } from '../../../../../core/utils';
 
 export const ManagerHomeScreen = () => {
   const { profile, requests, isLoading, fetchProfile, fetchRequests, subscribeToRealtime, unsubscribeFromRealtime } = useManagerStore();
@@ -80,21 +79,18 @@ export const ManagerHomeScreen = () => {
                  <Text variant="body" style={{ color: theme.colors.text.secondary, marginTop: 10 }}>Nenhuma solicitação pendente.</Text>
             ) : (
                 pendingRequests.slice(0, 3).map((request) => (
-                  <View key={request.id} style={styles.listItem}>
-                    <Avatar 
-                      source={request.employeeAvatarUrl} 
-                      size="md"
-                      initials={request.employeeName.split(' ').map(n => n[0]).join('')} 
-                    />
-                    <View style={styles.userInfo}>
-                      <Text variant="body" weight="bold" style={styles.userName}>
-                        {request.employeeName}
-                      </Text>
-                      <Text variant="caption" style={styles.dateRange}>
-                        {formatDate(request.startDate)} - {formatDate(request.endDate)}
-                      </Text>
-                    </View>
-                  </View>
+                  <TeamRequestListItem
+                    key={request.id}
+                    employeeName={request.employeeName}
+                    employeeAvatarUrl={request.employeeAvatarUrl}
+                    startDate={request.startDate}
+                    endDate={request.endDate}
+                    status={request.status}
+                    avatarSize="md"
+                    showStatusDot={false}
+                    dateVariant="caption"
+                    style={styles.listItem}
+                  />
                 ))
             )}
           </View>

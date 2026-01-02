@@ -64,18 +64,6 @@ export const styles = StyleSheet.create({
     gap: theme.spacing.md,
   },
   listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xs,
-  },
-  userInfo: {
-    marginLeft: theme.spacing.md,
-    flex: 1,
-  },
-  userName: {
-    marginBottom: 4,
-  },
-  dateRange: {
-    color: theme.colors.brand.manager,
+    // Styles are handled by TeamRequestListItem component
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ManagerRequestsStackParamList } from '../../../../../app/navigation/manager/stacks/ManagerRequestsStack';
@@ -7,12 +7,11 @@ import { FlashList } from '@shopify/flash-list';
 import { 
   ScreenContainer, 
   Text, 
-  Avatar, 
-  FilterList 
+  FilterList,
+  TeamRequestListItem
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
-import { formatDate } from '../../../../../core/utils';
 import { useManagerStore } from '../../store/useManagerStore';
 import { TeamRequest } from '../../../domain/entities/TeamRequest';
 
@@ -46,19 +45,6 @@ export const ManagerRequestsScreen = () => {
           unsubscribeFromRealtime();
       }
   }, [unsubscribeFromRealtime]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return theme.colors.status.success;
-      case 'rejected':
-        return theme.colors.status.error;
-      case 'pending':
-        return theme.colors.status.warning;
-      default:
-        return theme.colors.text.disabled;
-    }
-  };
 
   if (isLoading && requests.length === 0) {
       return (
@@ -94,30 +80,18 @@ export const ManagerRequestsScreen = () => {
                     </View>
                 }
                 renderItem={({ item }: { item: TeamRequest }) => (
-                  <TouchableOpacity 
-                    style={styles.requestItem}
+                  <TeamRequestListItem
+                    employeeName={item.employeeName}
+                    employeeAvatarUrl={item.employeeAvatarUrl}
+                    startDate={item.startDate}
+                    endDate={item.endDate}
+                    status={item.status}
+                    avatarSize="lg"
+                    showStatusDot={true}
+                    dateVariant="body"
                     onPress={() => navigation.navigate('RequestAnalysis', { id: item.id })}
-                  >
-                    <Avatar 
-                      source={item.employeeAvatarUrl} 
-                      size="lg"
-                      initials={item.employeeName.split(' ').map(n => n[0]).join('')} 
-                    />
-                    <View style={styles.requestInfo}>
-                      <Text variant="body" weight="bold" style={styles.userName}>
-                        {item.employeeName}
-                      </Text>
-                      <Text variant="body" style={styles.dateRange}>
-                        {formatDate(item.startDate)} - {formatDate(item.endDate)}
-                      </Text>
-                    </View>
-                    <View 
-                      style={[
-                        styles.statusDot, 
-                        { backgroundColor: getStatusColor(item.status) }
-                      ]} 
-                    />
-                  </TouchableOpacity>
+                    style={styles.requestItem}
+                  />
                 )}
               />
             )}

@@ -1,18 +1,23 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { VacationStackParamList } from '../../../../../app/navigation/collaborator/stacks/VacationStack';
+import { FlashList } from '@shopify/flash-list';
 import { 
   ScreenContainer, 
-  Text, 
-  Spacer,
+  Text,
   FilterList
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { useVacationStore } from '../../store/useVacationStore';
 import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
 import { theme } from '../../../../../core/design-system/tokens';
+import { VacationHistoryItem } from '../../components/VacationHistoryItem/VacationHistoryItem';
+import { VacationRequest } from '../../../domain/entities/VacationRequest';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const FlashListAny = FlashList as any;
 
 const filters: string[] = ['Todos', 'Pendentes', 'Aprovadas', 'Reprovadas'];
 
@@ -85,10 +90,11 @@ export const VacationHistoryScreen = () => {
             <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
         ) : (
-          <FlatList
+          <FlashListAny
             data={filteredRequests}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: theme.spacing.xl }}
+            estimatedItemSize={100}
+            keyExtractor={(item: VacationRequest) => item.id}
+            contentContainerStyle={{ padding: theme.spacing.md, paddingBottom: theme.spacing.xl }}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
@@ -99,25 +105,11 @@ export const VacationHistoryScreen = () => {
                 </Text>
               </View>
             )}
-            renderItem={({ item }) => (
-              <TouchableOpacity 
-                style={styles.vacationItem}
+            renderItem={({ item }: { item: VacationRequest }) => (
+              <VacationHistoryItem
+                request={item}
                 onPress={() => navigation.navigate('VacationRequestDetails', { id: item.id })}
-              >
-                <View style={styles.vacationContent}>
-                  <Text variant="body" weight="bold">
-                    {item.title}
-                  </Text>
-                  <Spacer size="xs" />
-                  <Text variant="body" color="primary">
-                    {item.startDate} - {item.endDate}
-                  </Text>
-                  <Spacer size="xs" />
-                  <Text variant="caption" color="text.secondary" style={{ textTransform: 'capitalize' }}>
-                    Status: {item.status === 'pending' ? 'Pendente' : item.status === 'approved' ? 'Aprovada' : 'Reprovada'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              />
             )}
           />
         )}
