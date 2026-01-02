@@ -3,9 +3,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuthStore } from '../../features/auth/presentation/store/useAuthStore';
-import { RoleSelectionScreen } from '../../features/auth/presentation/screens/RoleSelectionScreen/RoleSelectionScreen';
-import { LoginScreen } from '../../features/auth/presentation/screens/LoginScreen';
-import { ForgotPasswordScreen } from '../../features/auth/presentation/screens/ForgotPasswordScreen';
+import { 
+  RoleSelectionScreen, 
+  LoginScreen, 
+  ForgotPasswordScreen 
+} from '../../features/auth/presentation/screens';
 import { ManagerNavigator } from './manager/ManagerNavigator';
 import { AdminHomeScreen } from '../../features/admin/presentation/screens/AdminHome/AdminHomeScreen';
 import { CollaboratorNavigator } from './collaborator/CollaboratorNavigator';
