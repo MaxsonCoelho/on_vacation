@@ -10,8 +10,8 @@ import {
   Button, 
   Spacer,
   ControlledFormField,
-  Dialog,
-  DialogAction
+  Toast,
+  ToastProps,
 } from '../../../../../core/design-system';
 import { dateMask } from '../../../../../core/utils';
 import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
@@ -61,12 +61,11 @@ export const RequestVacationScreen = () => {
   const { user } = useAuthStore();
   const { createRequest, isLoading } = useVacationStore();
   
-  const [dialog, setDialog] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    actions?: DialogAction[];
-  }>({ visible: false, title: '', message: '' });
+  const [toast, setToast] = useState<ToastProps>({
+    visible: false,
+    message: '',
+    variant: 'success',
+  });
 
   const { control, handleSubmit } = useForm<VacationFormData>({
     resolver: zodResolver(vacationSchema),
@@ -93,29 +92,22 @@ export const RequestVacationScreen = () => {
 
       console.log('[RequestVacation] Request created successfully');
 
-      setDialog({
+      setToast({
         visible: true,
-        title: 'Sucesso',
         message: 'Solicitação enviada com sucesso!',
-        actions: [{ 
-          text: 'OK', 
-          onPress: () => {
-            setDialog(prev => ({ ...prev, visible: false }));
-            navigation.goBack();
-          } 
-        }]
+        variant: 'success',
+        onDismiss: () => {
+          setToast(prev => ({ ...prev, visible: false }));
+          navigation.goBack();
+        }
       });
     } catch (error) {
       console.error('[RequestVacation] Error creating request:', error);
-      setDialog({
+      setToast({
         visible: true,
-        title: 'Erro',
-        message: 'Não foi possível enviar a solicitação. Tente novamente.',
-        actions: [{ 
-          text: 'OK', 
-          onPress: () => setDialog(prev => ({ ...prev, visible: false })),
-          variant: 'outline'
-        }]
+        message: 'Não foi possível enviar a solicitação.',
+        variant: 'error',
+        onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
       });
     }
   };
@@ -176,12 +168,12 @@ export const RequestVacationScreen = () => {
           </View>
         </View>
       </ScreenContainer>
-      <Dialog
-        visible={dialog.visible}
-        title={dialog.title}
-        message={dialog.message}
-        actions={dialog.actions}
-        onClose={() => setDialog(prev => ({ ...prev, visible: false }))}
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        variant={toast.variant}
+        duration={1500}
+        onDismiss={toast.onDismiss}
       />
     </>
   );
