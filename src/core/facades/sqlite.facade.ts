@@ -6,7 +6,7 @@ export const saveSession = async (id: string, email: string, name: string, role:
     // Using parameterized query with runAsync to prevent SQL injection and Android NPE issues
     await db.runAsync(
       'INSERT OR REPLACE INTO auth_session (id, email, name, role, status, created_at, avatar) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, email, name, role, status, created_at, avatar || '']
+      [id, email, name, role, status, created_at, avatar ?? null]
     );
     console.log('[SQLite] Sessão salva.');
   } catch (error) {
