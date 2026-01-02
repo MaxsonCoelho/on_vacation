@@ -1,8 +1,8 @@
-import { getDBConnection } from '../services/sqlite';
+import { getDatabase } from '../offline/database/connection';
 
 export const saveSession = async (id: string, email: string, name: string, role: string, status: string, created_at: string, avatar?: string) => {
   try {
-    const db = await getDBConnection();
+    const db = await getDatabase();
     // Using parameterized query with runAsync to prevent SQL injection and Android NPE issues
     await db.runAsync(
       'INSERT OR REPLACE INTO auth_session (id, email, name, role, status, created_at, avatar) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -17,7 +17,7 @@ export const saveSession = async (id: string, email: string, name: string, role:
 
 export const getSession = async () => {
   try {
-    const db = await getDBConnection();
+    const db = await getDatabase();
     // Using parameterized query correctly with getAllAsync
     const result = await db.getAllAsync<{
       id: string;
@@ -37,7 +37,7 @@ export const getSession = async () => {
 
 export const clearSession = async () => {
   try {
-    const db = await getDBConnection();
+    const db = await getDatabase();
     // Use runAsync for delete
     await db.runAsync('DELETE FROM auth_session');
     console.log('[SQLite] Sessão limpa.');
@@ -60,7 +60,7 @@ export const _test_resetDB = async () => {
   
   // Clear other tables
   try {
-    const db = await getDBConnection();
+    const db = await getDatabase();
     await db.execAsync('DELETE FROM vacation_requests');
     await db.execAsync('DELETE FROM sync_queue');
     console.log('[SQLite] DB reset complete (session, vacation_requests, sync_queue).');

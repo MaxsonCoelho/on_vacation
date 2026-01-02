@@ -49,9 +49,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
-    // Avoid setting loading to true if just checking initialization to prevent flash
-    // But since we want to block app load, maybe it's fine.
-    // Let's set it to true.
     set({ isLoading: true });
     try {
       const user = await checkAuthStatus();
