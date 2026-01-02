@@ -1,8 +1,10 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HeaderTitle, HeaderBackButton } from '../../../../core/design-system';
-import { VacationHistoryScreen } from '../../../../features/collaborator/presentation/screens/VacationHistory/VacationHistoryScreen';
-import { VacationRequestDetailsScreen } from '../../../../features/collaborator/presentation/screens/VacationRequestDetails/VacationRequestDetailsScreen';
+import { 
+  VacationHistoryScreen, 
+  VacationRequestDetailsScreen 
+} from '../../../../features/collaborator/presentation/screens';
 
 export type VacationStackParamList = {
   VacationHistory: undefined;

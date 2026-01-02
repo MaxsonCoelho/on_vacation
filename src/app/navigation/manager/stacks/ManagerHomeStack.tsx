@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ManagerHomeScreen } from '../../../../features/manager/presentation/screens/ManagerHomeScreen';
+import { ManagerHomeScreen } from '../../../../features/manager/presentation/screens';
 import { HeaderTitle, HeaderIconAction, HeaderBackButton } from '../../../../core/design-system';
 
 // Por enquanto vamos reutilizar a SettingsScreen do colaborador ou criar uma específica para o manager futuramente

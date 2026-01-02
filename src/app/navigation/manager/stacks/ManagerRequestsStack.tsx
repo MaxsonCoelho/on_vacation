@@ -1,8 +1,10 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HeaderTitle } from '../../../../core/design-system';
-import { ManagerRequestsScreen } from '../../../../features/manager/presentation/screens/ManagerRequestsScreen/ManagerRequestsScreen';
-import { RequestAnalysisScreen } from '../../../../features/manager/presentation/screens/RequestAnalysisScreen/RequestAnalysisScreen';
+import { 
+  ManagerRequestsScreen, 
+  RequestAnalysisScreen 
+} from '../../../../features/manager/presentation/screens';
 
 export type ManagerRequestsStackParamList = {
   ManagerRequests: undefined;
