@@ -17,7 +17,6 @@ export const ManagerHomeScreen = () => {
   const { profile, requests, isLoading, fetchProfile, fetchRequests, subscribeToRealtime, unsubscribeFromRealtime } = useManagerStore();
 
   useEffect(() => {
-    subscribeToRealtime();
     return () => unsubscribeFromRealtime();
   }, []);
 
@@ -25,6 +24,7 @@ export const ManagerHomeScreen = () => {
     useCallback(() => {
       fetchProfile();
       fetchRequests('Pendentes');
+      subscribeToRealtime();
     }, [])
   );
 
