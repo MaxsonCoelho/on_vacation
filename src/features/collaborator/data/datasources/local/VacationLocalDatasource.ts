@@ -3,23 +3,28 @@ import { VacationRequest, VacationStatus } from '../../../domain/entities/Vacati
 
 export const saveRequestLocal = async (request: VacationRequest): Promise<void> => {
   const db = await getDatabase();
-  await db.runAsync(
-    `INSERT OR REPLACE INTO vacation_requests (
-      id, user_id, title, start_date, end_date, status, collaborator_notes, manager_notes, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      request.id,
-      request.userId,
-      request.title,
-      request.startDate,
-      request.endDate,
-      request.status,
-      request.collaboratorNotes || null,
-      request.managerNotes || null,
-      request.createdAt,
-      request.updatedAt,
-    ]
-  );
+  try {
+    await db.runAsync(
+      `INSERT OR REPLACE INTO vacation_requests (
+        id, user_id, title, start_date, end_date, status, collaborator_notes, manager_notes, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        request.id,
+        request.userId,
+        request.title,
+        request.startDate,
+        request.endDate,
+        request.status,
+        request.collaboratorNotes || null,
+        request.managerNotes || null,
+        request.createdAt,
+        request.updatedAt,
+      ]
+    );
+  } catch (error) {
+    console.error('[VacationLocalDatasource] Error saving request:', error);
+    throw error;
+  }
 };
 
 interface VacationRequestDB {

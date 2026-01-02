@@ -1,9 +1,8 @@
 import { useAuthStore } from '../presentation/store/useAuthStore';
 import { _test_resetDB } from '../../../core/facades/sqlite.facade';
+import { TEST_EMAIL, TEST_PASSWORD } from './utils';
 
 // Note: This test requires valid Supabase credentials and a corresponding user profile in the 'users' table.
-const TEST_EMAIL = 'colaborador@onvacation.com';
-const TEST_PASSWORD = '123456'; // PLEASE UPDATE THIS WITH A VALID PASSWORD
 
 describe('Auth Integration Tests (Real)', () => {
   beforeEach(async () => {

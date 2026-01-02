@@ -55,4 +55,15 @@ export const _test_resetDB = async () => {
     return;
   }
   await clearSession();
+  
+  // Clear other tables
+  try {
+    const db = await getDBConnection();
+    await db.execAsync('DELETE FROM vacation_requests');
+    await db.execAsync('DELETE FROM sync_queue');
+    console.log('[SQLite] DB reset complete (session, vacation_requests, sync_queue).');
+  } catch (error) {
+    // Tables might not exist yet, which is fine
+    console.log('[SQLite] DB reset partial (tables might not exist).', error);
+  }
 };
