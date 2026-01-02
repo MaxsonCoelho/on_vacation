@@ -28,7 +28,6 @@ export const ManagerRepositoryImpl: ManagerRepository = {
         console.log('[ManagerRepository] Local is empty, fetching remote...');
         try {
             const remoteRequests = await Remote.getTeamRequestsRemote();
-            console.log('[ManagerRepository] Remote requests count:', remoteRequests.length);
             
             // Update in-memory requests immediately so UI shows data even if save fails
             requests = remoteRequests;
@@ -45,15 +44,13 @@ export const ManagerRepositoryImpl: ManagerRepository = {
         // Optional: Background sync could go here
         // For debugging: let's try to fetch remote anyway and update local if successful
         try {
-             console.log('[ManagerRepository] Fetching remote to update local...');
+             // console.log('[ManagerRepository] Fetching remote to update local...');
              const remoteRequests = await Remote.getTeamRequestsRemote();
-             console.log('[ManagerRepository] Remote requests updated count:', remoteRequests.length);
-             
-             // Update in-memory requests immediately
-             requests = remoteRequests;
              
              try {
                 await Local.saveRequestsLocal(remoteRequests);
+                // Re-fetch from local to get the merged state (remote + preserved local changes)
+                requests = await Local.getTeamRequestsLocal();
              } catch (saveError) {
                 console.warn('[ManagerRepository] Error saving to local DB (background sync):', saveError);
              }

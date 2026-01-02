@@ -144,6 +144,7 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
                     endDate: row.end_date,
                     status: row.status as RequestStatus,
                     createdAt: row.created_at,
+                    updatedAt: row.updated_at,
                     notes: row.collaborator_notes
                    };
                });
@@ -161,6 +162,7 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
     endDate: row.end_date,
     status: row.status as RequestStatus,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
     notes: row.collaborator_notes
   }));
 };

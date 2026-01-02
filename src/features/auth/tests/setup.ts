@@ -7,6 +7,21 @@ process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'sb_publishable_jZLKUowm3a2ltI2mZLN3
 // Mock global objects or native modules here if needed
 jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
 
+jest.mock('@react-native-community/netinfo', () => ({
+    addEventListener: jest.fn(),
+    fetch: jest.fn().mockResolvedValue({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'wifi',
+    }),
+    useNetInfo: jest.fn().mockReturnValue({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'wifi',
+    }),
+}));
+
+
 // Mock expo-sqlite with in-memory implementation (Fake)
 // Store data by table name
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -65,6 +80,32 @@ jest.mock('expo-sqlite', () => ({
                   // console.log('[MockSQLite] Row inserted:', JSON.stringify(row));
               }
           }
+      } else if (sql.trim().startsWith('UPDATE')) {
+          const match = sql.match(/UPDATE (\w+) SET/);
+          if (match) {
+               const tableName = match[1];
+               // console.log('[MockSQLite] Updating table:', tableName);
+               
+               // Very basic UPDATE parsing for "SET col1 = ?, col2 = ? WHERE id = ?"
+               const setClause = sql.substring(sql.indexOf('SET') + 3, sql.indexOf('WHERE')).trim();
+               const setCols = setClause.split(',').map(part => part.split('=')[0].trim());
+               
+               // Assume WHERE id = ? is the last parameter
+               const id = params[params.length - 1];
+               
+               if (dbData[tableName]) {
+                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                   const row = dbData[tableName].find((r: any) => r.id === id);
+                   if (row) {
+                       setCols.forEach((col, i) => {
+                           row[col] = params[i];
+                       });
+                       // console.log('[MockSQLite] Row updated:', row);
+                   } else {
+                       console.warn('[MockSQLite] Row not found for update:', id);
+                   }
+               }
+           }
       } else if (sql.trim().startsWith('DELETE FROM')) {
           // Fallback for DELETE in runAsync if used
           const match = sql.match(/DELETE FROM (\w+)/);
@@ -78,7 +119,8 @@ jest.mock('expo-sqlite', () => ({
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getAllAsync: jest.fn(async (sql: string, params: any[] = []) => {
-        const match = sql.match(/SELECT \* FROM (\w+)/);
+        // Match SELECT ... FROM table
+        const match = sql.match(/SELECT .* FROM (\w+)/);
         if (match) {
             const tableName = match[1];
             let rows = dbData[tableName] || [];
@@ -88,8 +130,14 @@ jest.mock('expo-sqlite', () => ({
                 const userId = params[0];
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 rows = rows.filter((r: any) => r.user_id === userId);
-            } else if (sql.includes('LIMIT 1')) {
-                return rows.slice(0, 1);
+            } else if (sql.includes('WHERE id = ?')) {
+                const id = params[0];
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                rows = rows.filter((r: any) => r.id === id);
+            }
+            
+            if (sql.includes('LIMIT 1')) {
+                rows = rows.slice(0, 1);
             }
             
             // Handle ORDER BY created_at DESC (simple sort)

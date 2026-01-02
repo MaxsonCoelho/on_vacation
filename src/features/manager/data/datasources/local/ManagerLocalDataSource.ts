@@ -60,6 +60,7 @@ export const getTeamRequestsLocal = async (): Promise<TeamRequest[]> => {
     endDate: row.end_date,
     status: row.status as RequestStatus,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
     notes: row.collaborator_notes
   }));
 };
@@ -67,27 +68,47 @@ export const getTeamRequestsLocal = async (): Promise<TeamRequest[]> => {
 export const saveRequestsLocal = async (requests: TeamRequest[]): Promise<void> => {
   const db = await getDatabase();
   for (const req of requests) {
-    await db.runAsync(
-        `INSERT OR REPLACE INTO vacation_requests (
-            id, user_id, title, start_date, end_date, status, 
-            collaborator_notes, manager_notes, created_at, updated_at, 
-            requester_name, requester_avatar
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-            req.id, 
-            req.employeeId, 
-            req.title, 
-            req.startDate, 
-            req.endDate, 
-            req.status, 
-            req.notes || '', 
-            '', 
-            req.createdAt, 
-            new Date().toISOString(), 
-            req.employeeName, 
-            req.employeeAvatarUrl || ''
-        ]
-    );
+    // Check if exists and compare updatedAt to prevent overwriting newer local changes
+    const existing = await db.getAllAsync<VacationRequestDB>(
+         'SELECT updated_at FROM vacation_requests WHERE id = ?', 
+         [req.id]
+     );
+
+     let shouldUpdate = true;
+     if (existing.length > 0) {
+         const localUpdated = new Date(existing[0].updated_at).getTime();
+         const remoteUpdated = new Date(req.updatedAt || req.createdAt).getTime();
+         
+         // If local is NEWER than remote (e.g. pending sync), DO NOT OVERWRITE
+         if (localUpdated > remoteUpdated) {
+             // console.log(`[ManagerLocal] Skipping update for ${req.id} (Local is newer)`);
+             shouldUpdate = false;
+         }
+     }
+
+    if (shouldUpdate) {
+        await db.runAsync(
+            `INSERT OR REPLACE INTO vacation_requests (
+                id, user_id, title, start_date, end_date, status, 
+                collaborator_notes, manager_notes, created_at, updated_at, 
+                requester_name, requester_avatar
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                req.id, 
+                req.employeeId, 
+                req.title, 
+                req.startDate, 
+                req.endDate, 
+                req.status, 
+                req.notes || '', 
+                '', 
+                req.createdAt, 
+                req.updatedAt || new Date().toISOString(), 
+                req.employeeName, 
+                req.employeeAvatarUrl || ''
+            ]
+        );
+    }
   }
 };
 

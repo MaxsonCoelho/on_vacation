@@ -10,5 +10,6 @@ export interface TeamRequest {
   endDate: string;
   status: RequestStatus;
   createdAt: string;
+  updatedAt?: string;
   notes?: string;
 }
