@@ -17,7 +17,7 @@ interface ManagerState {
   subscription: RealtimeChannel | null;
   
   fetchProfile: () => Promise<void>;
-  fetchRequests: (filter?: string) => Promise<void>;
+  fetchRequests: (filter?: string, showLoading?: boolean) => Promise<void>;
   approveRequest: (requestId: string, notes?: string) => Promise<void>;
   rejectRequest: (requestId: string, notes?: string) => Promise<void>;
   subscribeToRealtime: () => void;
@@ -43,9 +43,10 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
     }
   },
 
-  fetchRequests: async (filter?: string) => {
-    // Only set loading if requests are empty to avoid flickering on realtime updates
-    if (get().requests.length === 0) {
+  fetchRequests: async (filter?: string, showLoading = true) => {
+    // Only set loading if showLoading is true
+    // This allows realtime updates to skip loading state to avoid flickering
+    if (showLoading) {
         set({ isLoading: true, error: null });
     }
     
@@ -71,7 +72,7 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
             { event: '*', schema: 'public', table: 'vacation_requests' }, 
             (payload) => {
                 console.log('[ManagerStore] Realtime update received:', payload);
-                fetchRequests(); // Refresh list
+                fetchRequests(undefined, false); // Refresh list without loading state
             }
         )
         .subscribe();

@@ -16,6 +16,9 @@ import { formatDate } from '../../../../../core/utils';
 import { useManagerStore } from '../../store/useManagerStore';
 import { TeamRequest } from '../../../domain/entities/TeamRequest';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const FlashListAny = FlashList as any;
+
 const FILTERS = ['Todas', 'Pendentes', 'Aprovadas', 'Reprovadas'];
 
 type NavigationProp = NativeStackNavigationProp<ManagerRequestsStackParamList, 'ManagerRequests'>;
@@ -75,43 +78,49 @@ export const ManagerRequestsScreen = () => {
         />
 
         <View style={{ flex: 1 }}>
-            <FlashList<TeamRequest>
-              data={requests}
-              estimatedItemSize={80}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContainer}
-              ListEmptyComponent={
-                  <View style={{ alignItems: 'center', marginTop: 50 }}>
-                      <Text variant="body" color="text.secondary">Nenhuma solicitação encontrada.</Text>
-                  </View>
-              }
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.requestItem}
-                  onPress={() => navigation.navigate('RequestAnalysis', { id: item.id })}
-                >
-                  <Avatar 
-                    source={item.employeeAvatarUrl} 
-                    size="lg"
-                    initials={item.employeeName.split(' ').map(n => n[0]).join('')} 
-                  />
-                  <View style={styles.requestInfo}>
-                    <Text variant="body" weight="bold" style={styles.userName}>
-                      {item.employeeName}
-                    </Text>
-                    <Text variant="body" style={styles.dateRange}>
-                      {formatDate(item.startDate)} - {formatDate(item.endDate)}
-                    </Text>
-                  </View>
-                  <View 
-                    style={[
-                      styles.statusDot, 
-                      { backgroundColor: getStatusColor(item.status) }
-                    ]} 
-                  />
-                </TouchableOpacity>
-              )}
-            />
+            {isLoading ? (
+               <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                  <ActivityIndicator size="large" color={theme.colors.primary} />
+               </View>
+            ) : (
+              <FlashListAny
+                data={requests}
+                estimatedItemSize={80}
+                keyExtractor={(item: TeamRequest) => item.id}
+                contentContainerStyle={styles.listContainer}
+                ListEmptyComponent={
+                    <View style={{ alignItems: 'center', marginTop: 50 }}>
+                        <Text variant="body" color="text.secondary">Nenhuma solicitação encontrada.</Text>
+                    </View>
+                }
+                renderItem={({ item }: { item: TeamRequest }) => (
+                  <TouchableOpacity 
+                    style={styles.requestItem}
+                    onPress={() => navigation.navigate('RequestAnalysis', { id: item.id })}
+                  >
+                    <Avatar 
+                      source={item.employeeAvatarUrl} 
+                      size="lg"
+                      initials={item.employeeName.split(' ').map(n => n[0]).join('')} 
+                    />
+                    <View style={styles.requestInfo}>
+                      <Text variant="body" weight="bold" style={styles.userName}>
+                        {item.employeeName}
+                      </Text>
+                      <Text variant="body" style={styles.dateRange}>
+                        {formatDate(item.startDate)} - {formatDate(item.endDate)}
+                      </Text>
+                    </View>
+                    <View 
+                      style={[
+                        styles.statusDot, 
+                        { backgroundColor: getStatusColor(item.status) }
+                      ]} 
+                    />
+                  </TouchableOpacity>
+                )}
+              />
+            )}
         </View>
       </View>
     </ScreenContainer>
