@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { 
   ScreenContainer, 
@@ -22,9 +22,16 @@ type HomeNavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
 export const CollaboratorHomeScreen = () => {
   const { user } = useAuthStore();
-  const { requests, isLoading, fetchRequests } = useVacationStore();
+  const { requests, isLoading, fetchRequests, subscribeToRealtime, unsubscribeFromRealtime } = useVacationStore();
   const { profile, fetchProfile } = useProfileStore();
   const navigation = useNavigation<HomeNavigationProp>();
+
+  useEffect(() => {
+      if (user?.id) {
+          subscribeToRealtime(user.id);
+      }
+      return () => unsubscribeFromRealtime();
+  }, [user?.id]);
 
   useFocusEffect(
     useCallback(() => {

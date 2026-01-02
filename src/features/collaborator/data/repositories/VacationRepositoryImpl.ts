@@ -7,27 +7,24 @@ import { generateUUID } from '../../../../core/utils';
 
 export const VacationRepositoryImpl: VacationRepository = {
   getRequests: async (userId: string): Promise<VacationRequest[]> => {
-    // Strategy: Read local first (Source of Truth), then sync
-    // For now, let's keep it simple: read local.
-    // Ideally, we should have a way to trigger background sync here.
-    const localRequests = await getRequestsLocal(userId);
-    
-    if (localRequests.length === 0) {
-        // Fallback or initial sync
-        try {
-            const remoteRequests = await getRequestsRemote(userId);
-            // Save remote to local
-            for (const req of remoteRequests) {
-                await saveRequestLocal(req);
-            }
-            return remoteRequests;
-        } catch (error) {
-            console.warn('[VacationRepository] Error fetching remote requests:', error);
-            return [];
-        }
+    try {
+        // 1. Try to fetch fresh data from remote
+        console.log('[VacationRepository] Fetching remote requests...');
+        const remoteRequests = await getRequestsRemote(userId);
+        
+        // 2. Update local cache with remote data
+        // We use Promise.all for parallel insertion which is faster
+        await Promise.all(remoteRequests.map(req => saveRequestLocal(req)));
+        
+        console.log(`[VacationRepository] Synced ${remoteRequests.length} requests from remote.`);
+    } catch (error) {
+        console.warn('[VacationRepository] Error fetching remote requests (offline mode):', error);
+        // Continue to return local data even if remote fails
     }
 
-    return localRequests;
+    // 3. Return local data (Single Source of Truth)
+    // This includes the freshly synced remote items + any pending local items that haven't synced yet
+    return await getRequestsLocal(userId);
   },
 
   createRequest: async (request: Omit<VacationRequest, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'managerNotes'>): Promise<void> => {

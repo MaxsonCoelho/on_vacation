@@ -4,31 +4,24 @@ import { VacationRequest, VacationStatus } from '../../../domain/entities/Vacati
 export const saveRequestLocal = async (request: VacationRequest): Promise<void> => {
   const db = await getDatabase();
   try {
-    // Workaround for Android NativeDatabase.prepareAsync NPE with runAsync
-    const escape = (str: string | undefined) => str ? str.replace(/'/g, "''") : '';
-    
-    const collaboratorNotesVal = request.collaboratorNotes ? `'${escape(request.collaboratorNotes)}'` : 'NULL';
-    const managerNotesVal = request.managerNotes ? `'${escape(request.managerNotes)}'` : 'NULL';
-    const requesterNameVal = request.requesterName ? `'${escape(request.requesterName)}'` : 'NULL';
-    const requesterAvatarVal = request.requesterAvatar ? `'${escape(request.requesterAvatar)}'` : 'NULL';
-
-    await db.execAsync(
+    await db.runAsync(
       `INSERT OR REPLACE INTO vacation_requests (
         id, user_id, title, start_date, end_date, status, collaborator_notes, manager_notes, created_at, updated_at, requester_name, requester_avatar
-      ) VALUES (
-        '${request.id}',
-        '${request.userId}',
-        '${escape(request.title)}',
-        '${request.startDate}',
-        '${request.endDate}',
-        '${request.status}',
-        ${collaboratorNotesVal},
-        ${managerNotesVal},
-        '${request.createdAt}',
-        '${request.updatedAt}',
-        ${requesterNameVal},
-        ${requesterAvatarVal}
-      )`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        request.id,
+        request.userId,
+        request.title,
+        request.startDate,
+        request.endDate,
+        request.status,
+        request.collaboratorNotes || null,
+        request.managerNotes || null,
+        request.createdAt,
+        request.updatedAt,
+        request.requesterName || null,
+        request.requesterAvatar || null
+      ]
     );
   } catch (error) {
     console.error('[VacationLocalDatasource] Error saving request:', error);
@@ -52,14 +45,19 @@ interface VacationRequestDB {
 }
 
 export const getRequestsLocal = async (userId: string): Promise<VacationRequest[]> => {
+  if (!userId) {
+      console.warn('[VacationLocalDatasource] getRequestsLocal called with empty userId');
+      return [];
+  }
+
   const db = await getDatabase();
   console.log('[VacationLocalDatasource] Fetching requests for user:', userId);
   
   try {
-    // Tenta passar array vazio explicitamente para evitar NPE no prepareAsync do Android
-    const result = await db.getAllAsync(
-      `SELECT * FROM vacation_requests WHERE user_id = '${userId}' ORDER BY created_at DESC`,
-      []
+    // Using parameterized query correctly with runAsync/getAllAsync
+    const result = await db.getAllAsync<VacationRequestDB>(
+      'SELECT * FROM vacation_requests WHERE user_id = ? ORDER BY created_at DESC',
+      [userId]
     );
 
     return (result as VacationRequestDB[]).map((item) => ({

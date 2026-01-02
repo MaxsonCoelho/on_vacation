@@ -12,7 +12,9 @@ import {
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
+import { formatDate } from '../../../../../core/utils';
 import { useManagerStore } from '../../store/useManagerStore';
+import { TeamRequest } from '../../../domain/entities/TeamRequest';
 
 const FILTERS = ['Todas', 'Pendentes', 'Aprovadas', 'Reprovadas'];
 
@@ -21,13 +23,26 @@ type NavigationProp = NativeStackNavigationProp<ManagerRequestsStackParamList, '
 export const ManagerRequestsScreen = () => {
   const [activeFilter, setActiveFilter] = useState('Todas');
   const navigation = useNavigation<NavigationProp>();
-  const { requests, isLoading, fetchRequests } = useManagerStore();
+  const { requests, isLoading, fetchRequests, subscribeToRealtime, unsubscribeFromRealtime } = useManagerStore();
 
   useFocusEffect(
     useCallback(() => {
       fetchRequests(activeFilter);
-    }, [activeFilter])
+      subscribeToRealtime();
+      
+      return () => {
+        // We don't unsubscribe on blur to keep updates coming if we go to details
+        // But we should consider if we want to unsubscribe when leaving the stack
+      };
+    }, [activeFilter, fetchRequests, subscribeToRealtime])
   );
+  
+  // Also use useEffect for mounting/unmounting
+  React.useEffect(() => {
+      return () => {
+          unsubscribeFromRealtime();
+      }
+  }, [unsubscribeFromRealtime]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -60,7 +75,7 @@ export const ManagerRequestsScreen = () => {
         />
 
         <View style={{ flex: 1 }}>
-            <FlashList<import('../../../domain/entities/TeamRequest').TeamRequest>
+            <FlashList<TeamRequest>
               data={requests}
               estimatedItemSize={80}
               keyExtractor={(item) => item.id}
@@ -85,7 +100,7 @@ export const ManagerRequestsScreen = () => {
                       {item.employeeName}
                     </Text>
                     <Text variant="body" style={styles.dateRange}>
-                      {item.startDate} - {item.endDate}
+                      {formatDate(item.startDate)} - {formatDate(item.endDate)}
                     </Text>
                   </View>
                   <View 

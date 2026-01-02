@@ -3,20 +3,10 @@ import { getDBConnection } from '../services/sqlite';
 export const saveSession = async (id: string, email: string, name: string, role: string, status: string, created_at: string, avatar?: string) => {
   try {
     const db = await getDBConnection();
-    // Workaround for Android NativeDatabase.prepareAsync NPE with runAsync
-    // We manually interpolate values and use execAsync
-    const escape = (str: string) => str.replace(/'/g, "''");
-    
-    await db.execAsync(
-      `INSERT OR REPLACE INTO auth_session (id, email, name, role, status, created_at, avatar) VALUES (
-        '${id}', 
-        '${escape(email)}', 
-        '${escape(name)}', 
-        '${role}', 
-        '${status}', 
-        '${created_at}', 
-        '${avatar ? escape(avatar) : ''}'
-      )`
+    // Using parameterized query with runAsync to prevent SQL injection and Android NPE issues
+    await db.runAsync(
+      'INSERT OR REPLACE INTO auth_session (id, email, name, role, status, created_at, avatar) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, email, name, role, status, created_at, avatar || '']
     );
     console.log('[SQLite] Sessão salva.');
   } catch (error) {
@@ -28,7 +18,7 @@ export const saveSession = async (id: string, email: string, name: string, role:
 export const getSession = async () => {
   try {
     const db = await getDBConnection();
-    // Pass empty array to avoid NPE on Android prepareAsync
+    // Using parameterized query correctly with getAllAsync
     const result = await db.getAllAsync<{
       id: string;
       email: string;
@@ -37,7 +27,7 @@ export const getSession = async () => {
       status: string;
       created_at: string;
       avatar: string;
-    }>('SELECT * FROM auth_session LIMIT 1', []);
+    }>('SELECT * FROM auth_session LIMIT 1');
     return result[0] || null;
   } catch (error) {
     console.error('[SQLite] Erro ao buscar sessão:', error);
@@ -48,8 +38,8 @@ export const getSession = async () => {
 export const clearSession = async () => {
   try {
     const db = await getDBConnection();
-    // Use execAsync for simple delete without parameters to avoid prepareAsync issues
-    await db.execAsync('DELETE FROM auth_session');
+    // Use runAsync for delete
+    await db.runAsync('DELETE FROM auth_session');
     console.log('[SQLite] Sessão limpa.');
   } catch (error) {
     console.error('[SQLite] Erro ao limpar sessão:', error);

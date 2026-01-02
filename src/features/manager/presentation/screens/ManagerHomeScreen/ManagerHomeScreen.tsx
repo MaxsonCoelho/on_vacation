@@ -11,6 +11,7 @@ import {
 import { styles } from './styles';
 import { useManagerStore } from '../../store/useManagerStore';
 import { theme } from '../../../../../core/design-system/tokens';
+import { formatDate } from '../../../../../core/utils';
 
 export const ManagerHomeScreen = () => {
   const { profile, requests, isLoading, fetchProfile, fetchRequests, subscribeToRealtime, unsubscribeFromRealtime } = useManagerStore();
@@ -27,7 +28,9 @@ export const ManagerHomeScreen = () => {
     }, [])
   );
 
-  const pendingRequests = requests.filter(r => r.status === 'pending');
+  const pendingRequests = requests
+    .filter(r => r.status === 'pending')
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
  if (isLoading && !profile) {
          return (
@@ -88,7 +91,7 @@ export const ManagerHomeScreen = () => {
                         {request.employeeName}
                       </Text>
                       <Text variant="caption" style={styles.dateRange}>
-                        {request.startDate} - {request.endDate}
+                        {formatDate(request.startDate)} - {formatDate(request.endDate)}
                       </Text>
                     </View>
                   </View>

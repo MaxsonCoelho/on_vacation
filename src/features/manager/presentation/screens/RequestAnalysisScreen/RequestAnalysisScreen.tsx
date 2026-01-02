@@ -12,6 +12,7 @@ import {
 import { theme } from '../../../../../core/design-system/tokens';
 import { styles } from './styles';
 import { useManagerStore } from '../../store/useManagerStore';
+import { formatDate } from '../../../../../core/utils';
 
 type Props = NativeStackScreenProps<ManagerRequestsStackParamList, 'RequestAnalysis'>;
 
@@ -90,7 +91,7 @@ export const RequestAnalysisScreen: React.FC<Props> = ({ navigation, route }) =>
         </Text>
         <View style={styles.periodContainer}>
           <Text variant="body">
-            {request.startDate} - {request.endDate}
+            {formatDate(request.startDate)} - {formatDate(request.endDate)}
           </Text>
           {/* <Text variant="body" style={styles.durationText}>
             {request.duration}

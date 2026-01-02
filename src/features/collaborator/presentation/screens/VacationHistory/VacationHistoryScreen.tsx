@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,9 +21,20 @@ type NavigationProp = NativeStackNavigationProp<VacationStackParamList, 'Vacatio
 export const VacationHistoryScreen = () => {
   const [activeFilter, setActiveFilter] = useState<string>('Todos');
   const navigation = useNavigation<NavigationProp>();
-  const { requests, fetchRequests, isLoading } = useVacationStore();
+  const { requests, fetchRequests, isLoading, subscribeToRealtime, unsubscribeFromRealtime } = useVacationStore();
   const { user } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    if (user?.id) {
+      subscribeToRealtime(user.id);
+    }
+    
+    return () => {
+      unsubscribeFromRealtime();
+    };
+  }, [user?.id, subscribeToRealtime, unsubscribeFromRealtime]);
 
   useFocusEffect(
     useCallback(() => {

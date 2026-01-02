@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { 
@@ -21,9 +21,16 @@ export const VacationRequestDetailsScreen = () => {
   const route = useRoute<DetailsRouteProp>();
   const navigation = useNavigation();
   const { id } = route.params;
-  const { requests } = useVacationStore();
+  const { requests, subscribeToRealtime, unsubscribeFromRealtime } = useVacationStore();
   const { user } = useAuthStore();
   const { profile } = useProfileStore();
+
+  useEffect(() => {
+      if (user?.id) {
+          subscribeToRealtime(user.id);
+      }
+      return () => unsubscribeFromRealtime();
+  }, [user?.id, subscribeToRealtime, unsubscribeFromRealtime]);
 
   const request = requests.find(r => r.id === id);
 
