@@ -17,12 +17,25 @@ export const loginRemote = async (email: string, password: string): Promise<User
         role: string;
         status: string;
         created_at: string;
-        avatar?: string;
-    }>('users', data.user.id);
+        avatar_url?: string;
+    }>('profiles', data.user.id);
     
     // Validar se o perfil existe e tem role válida
     if (!userProfile || !userProfile.role) {
          throw new Error('Perfil de usuário não encontrado ou inválido');
+    }
+
+    // Validar se o usuário está ativo (aprovado)
+    const userStatus = userProfile.status || 'active';
+    if (userStatus !== 'active') {
+        // Faz logout para limpar a sessão
+        await supabase.auth.signOut();
+        
+        if (userStatus === 'pending') {
+            throw new Error('Seu cadastro está pendente de aprovação. Aguarde a aprovação do administrador.');
+        } else {
+            throw new Error('Seu cadastro não está ativo. Entre em contato com o administrador.');
+        }
     }
 
     return UserMapper.toDomain(
@@ -30,9 +43,9 @@ export const loginRemote = async (email: string, password: string): Promise<User
         data.user.email,
         userProfile.name || '',
         userProfile.role,
-        userProfile.status || 'active',
+        userStatus,
         userProfile.created_at || new Date().toISOString(),
-        userProfile.avatar
+        userProfile.avatar_url
     );
 };
 

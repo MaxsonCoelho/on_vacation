@@ -33,6 +33,13 @@ export const authRepository: AuthRepository = {
                 return null;
             }
             
+            // Verifica se o usuário ainda está ativo (status pode ter mudado)
+            if (localUser.status !== 'active') {
+                await Local.clearUserSession();
+                await supabase.auth.signOut();
+                return null;
+            }
+            
             return localUser;
         }
 

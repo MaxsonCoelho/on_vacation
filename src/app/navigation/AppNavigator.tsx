@@ -9,7 +9,7 @@ import {
   ForgotPasswordScreen 
 } from '../../features/auth/presentation/screens';
 import { ManagerNavigator } from './manager/ManagerNavigator';
-import { AdminHomeScreen } from '../../features/admin/presentation/screens/AdminHome/AdminHomeScreen';
+import { AdminNavigator } from './admin/AdminNavigator';
 import { CollaboratorNavigator } from './collaborator/CollaboratorNavigator';
 import { RootStackParamList } from './types';
 
@@ -52,7 +52,8 @@ export const AppNavigator: React.FC = () => {
             {user.role === 'Administrador' && (
               <Stack.Screen 
                 name="AdminHome" 
-                component={AdminHomeScreen} 
+                component={AdminNavigator} 
+                options={{ headerShown: false }}
               />
             )}
             {user.role === 'Colaborador' && (
