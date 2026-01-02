@@ -3,14 +3,16 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppNavigator } from './navigation/AppNavigator';
-import { initDB } from '../core/services/sqlite';
+import { initOfflineDatabase } from '../core/offline';
+import { NetworkMonitor } from '../core/offline/connectivity/NetworkMonitor';
 
 export default function Main() {
   const [isDbReady, setIsDbReady] = React.useState(false);
 
   useEffect(() => {
     const setup = async () => {
-      await initDB();
+      await initOfflineDatabase();
+      NetworkMonitor.init();
       setIsDbReady(true);
     };
     setup();
