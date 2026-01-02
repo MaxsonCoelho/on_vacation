@@ -24,7 +24,7 @@ export const styles = StyleSheet.create({
     marginBottom: 4,
   },
   dateRange: {
-    color: theme.colors.primary,
+    color: theme.colors.brand.manager,
   },
   statusDot: {
     width: 12,

@@ -76,6 +76,6 @@ export const styles = StyleSheet.create({
     marginBottom: 4,
   },
   dateRange: {
-    color: theme.colors.primary, // Using primary color for the blueish tone
+    color: theme.colors.brand.manager,
   },
 });

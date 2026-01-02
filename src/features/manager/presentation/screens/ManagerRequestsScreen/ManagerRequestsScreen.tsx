@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, FlatList } from 'react-native';
+import { View, FlatList, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ManagerRequestsStackParamList } from '../../../../../app/navigation/manager/stacks/ManagerRequestsStack';
 import { 
   ScreenContainer, 
   Text, 
@@ -35,8 +38,11 @@ const REQUESTS = [
   },
 ];
 
+type NavigationProp = NativeStackNavigationProp<ManagerRequestsStackParamList, 'ManagerRequests'>;
+
 export const ManagerRequestsScreen = () => {
   const [activeFilter, setActiveFilter] = useState('Todas');
+  const navigation = useNavigation<NavigationProp>();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -65,7 +71,10 @@ export const ManagerRequestsScreen = () => {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           renderItem={({ item }) => (
-            <View style={styles.requestItem}>
+            <TouchableOpacity 
+              style={styles.requestItem}
+              onPress={() => navigation.navigate('RequestAnalysis', { id: item.id })}
+            >
               <Avatar 
                 source={item.avatarUrl} 
                 size="lg"
@@ -85,7 +94,7 @@ export const ManagerRequestsScreen = () => {
                   { backgroundColor: getStatusColor(item.status) }
                 ]} 
               />
-            </View>
+            </TouchableOpacity>
           )}
         />
       </View>

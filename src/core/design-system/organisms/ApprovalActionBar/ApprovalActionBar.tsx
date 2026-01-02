@@ -11,9 +11,10 @@ export const ApprovalActionBar: React.FC<ApprovalActionBarProps> = ({
   style,
   approveLabel = 'Aprovar',
   rejectLabel = 'Rejeitar',
+  approveButtonProps,
 }) => {
   return (
-    <SafeArea edges={['bottom']} style={[styles.container, style]}>
+    <SafeArea edges={['bottom']} style={[styles.container, { flex: 0 }, style]}>
       <ActionRow>
         <Button
           title={rejectLabel}
@@ -26,6 +27,7 @@ export const ApprovalActionBar: React.FC<ApprovalActionBarProps> = ({
           variant="primary"
           onPress={onApprove}
           disabled={disabled}
+          {...approveButtonProps}
         />
       </ActionRow>
     </SafeArea>

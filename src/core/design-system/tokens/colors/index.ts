@@ -38,6 +38,12 @@ const palette = {
     error: '#DC3545',   // Urgent error
     info: '#17A2B8',    // Helpful info
   },
+  // Brand - Role based
+  brand: {
+    collaborator: '#0066CC', // Default Blue
+    manager: '#009933',      // Dark Green
+    admin: '#CC5F22',        // Dark Orange
+  },
 };
 
 export const colors = {
@@ -49,6 +55,16 @@ export const colors = {
   primaryDark: palette.primary.dark,
   primaryLight: palette.primary.light,
   primaryContrast: palette.primary.contrast,
+
+  /**
+   * Role-based brand colors.
+   * Used to distinguish different user profiles.
+   */
+  brand: {
+    collaborator: palette.brand.collaborator,
+    manager: palette.brand.manager,
+    admin: palette.brand.admin,
+  },
 
   /**
    * Secondary brand colors.

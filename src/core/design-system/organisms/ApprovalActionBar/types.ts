@@ -1,4 +1,4 @@
-import { StyleProp, ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle, TextStyle } from 'react-native';
 
 export interface ApprovalActionBarProps {
   onApprove: () => void;
@@ -7,4 +7,8 @@ export interface ApprovalActionBarProps {
   style?: StyleProp<ViewStyle>;
   approveLabel?: string;
   rejectLabel?: string;
+  approveButtonProps?: {
+    style?: StyleProp<ViewStyle>;
+    textStyle?: StyleProp<TextStyle>;
+  };
 }
