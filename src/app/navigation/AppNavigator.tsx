@@ -6,7 +6,7 @@ import { useAuthStore } from '../../features/auth/presentation/store/useAuthStor
 import { RoleSelectionScreen } from '../../features/auth/presentation/screens/RoleSelectionScreen/RoleSelectionScreen';
 import { LoginScreen } from '../../features/auth/presentation/screens/LoginScreen';
 import { ForgotPasswordScreen } from '../../features/auth/presentation/screens/ForgotPasswordScreen';
-import { ManagerHomeScreen } from '../../features/manager/presentation/screens/ManagerHome/ManagerHomeScreen';
+import { ManagerNavigator } from './manager/ManagerNavigator';
 import { AdminHomeScreen } from '../../features/admin/presentation/screens/AdminHome/AdminHomeScreen';
 import { CollaboratorNavigator } from './collaborator/CollaboratorNavigator';
 import { RootStackParamList } from './types';
@@ -44,7 +44,7 @@ export const AppNavigator: React.FC = () => {
             {user.role === 'Gestor' && (
               <Stack.Screen 
                 name="ManagerHome" 
-                component={ManagerHomeScreen} 
+                component={ManagerNavigator} 
               />
             )}
             {user.role === 'Administrador' && (

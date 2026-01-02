@@ -1,26 +1,25 @@
 import React, { useState, useCallback } from 'react';
-import { View, ScrollView, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { VacationStackParamList } from '../../../../../app/navigation/collaborator/stacks/VacationStack';
 import { 
   ScreenContainer, 
   Text, 
-  Spacer 
+  Spacer,
+  FilterList
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { useVacationStore } from '../../store/useVacationStore';
 import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
 import { theme } from '../../../../../core/design-system/tokens';
 
-type FilterType = 'Todos' | 'Pendentes' | 'Aprovadas' | 'Reprovadas';
-
-const filters: FilterType[] = ['Todos', 'Pendentes', 'Aprovadas', 'Reprovadas'];
+const filters: string[] = ['Todos', 'Pendentes', 'Aprovadas', 'Reprovadas'];
 
 type NavigationProp = NativeStackNavigationProp<VacationStackParamList, 'VacationHistory'>;
 
 export const VacationHistoryScreen = () => {
-  const [activeFilter, setActiveFilter] = useState<FilterType>('Todos');
+  const [activeFilter, setActiveFilter] = useState<string>('Todos');
   const navigation = useNavigation<NavigationProp>();
   const { requests, fetchRequests, isLoading } = useVacationStore();
   const { user } = useAuthStore();
@@ -59,35 +58,15 @@ export const VacationHistoryScreen = () => {
 
   const filteredRequests = getFilteredRequests();
 
-  const renderFilter = (filter: FilterType) => {
-    const isActive = activeFilter === filter;
-    const backgroundColor = isActive ? '#E0E0E0' : '#F0F2F5'; 
-    
-    return (
-      <TouchableOpacity
-        key={filter}
-        style={[styles.filterItem, { backgroundColor }]}
-        onPress={() => setActiveFilter(filter)}
-      >
-        <Text variant="body" weight={isActive ? 'bold' : 'regular'}>
-          {filter}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <ScreenContainer scrollable={false} style={{ flex: 1 }} edges={['left', 'right']}>
       <View style={styles.container}>
         <View>
-            <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.filtersContainer}
-            contentContainerStyle={styles.filtersContentContainer}
-            >
-            {filters.map(renderFilter)}
-            </ScrollView>
+          <FilterList 
+            filters={filters}
+            activeFilter={activeFilter}
+            onSelectFilter={setActiveFilter}
+          />
         </View>
 
         {isLoading && !requests.length ? (

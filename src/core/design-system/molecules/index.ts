@@ -11,3 +11,4 @@ export * from './StatusPill';
 export * from './HeaderTitle';
 export * from './HeaderActions';
 export * from './Toast';
+export * from './FilterList/FilterList';
