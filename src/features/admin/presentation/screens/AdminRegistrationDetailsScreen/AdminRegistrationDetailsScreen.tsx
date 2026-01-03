@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Alert } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { 
@@ -10,7 +10,8 @@ import {
   Spacer,
   Card,
   Toast,
-  ToastProps
+  ToastProps,
+  Dialog
 } from '../../../../../core/design-system';
 import { useAdminStore } from '../../store/useAdminStore';
 import { styles } from './styles';
@@ -44,6 +45,8 @@ export const AdminRegistrationDetailsScreen = () => {
   
   const { approveUser, rejectUser, isLoading } = useAdminStore();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [toast, setToast] = useState<ToastProps>({
     visible: false,
     message: '',
@@ -53,80 +56,59 @@ export const AdminRegistrationDetailsScreen = () => {
   const initials = name.split(' ').map((n: string) => n[0]).join('').substring(0, 2);
 
   const handleApprove = async () => {
-    Alert.alert(
-      'Aprovar Cadastro',
-      `Deseja aprovar o cadastro de ${name}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Aprovar',
-          onPress: async () => {
-            try {
-              setIsProcessing(true);
-              await approveUser(userId);
-              setToast({
-                visible: true,
-                message: 'Cadastro aprovado com sucesso!',
-                variant: 'success',
-                onDismiss: () => {
-                  setToast(prev => ({ ...prev, visible: false }));
-                  navigation.goBack();
-                }
-              });
-            } catch (error) {
-              console.error('[AdminRegistrationDetails] Error approving user:', error);
-              setToast({
-                visible: true,
-                message: 'Não foi possível aprovar o cadastro. Tente novamente.',
-                variant: 'error',
-                onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
-              });
-            } finally {
-              setIsProcessing(false);
-            }
-          },
-        },
-      ]
-    );
+    try {
+      setIsProcessing(true);
+      await approveUser(userId);
+      setShowApproveDialog(false);
+      setToast({
+        visible: true,
+        message: 'Cadastro aprovado com sucesso!',
+        variant: 'success',
+        onDismiss: () => {
+          setToast(prev => ({ ...prev, visible: false }));
+          navigation.goBack();
+        }
+      });
+    } catch (error) {
+      console.error('[AdminRegistrationDetails] Error approving user:', error);
+      setShowApproveDialog(false);
+      setToast({
+        visible: true,
+        message: 'Não foi possível aprovar o cadastro. Tente novamente.',
+        variant: 'error',
+        onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleReject = async () => {
-    Alert.alert(
-      'Rejeitar Cadastro',
-      `Deseja rejeitar o cadastro de ${name}? Esta ação não pode ser desfeita.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Rejeitar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsProcessing(true);
-              await rejectUser(userId);
-              setToast({
-                visible: true,
-                message: 'Cadastro rejeitado.',
-                variant: 'success',
-                onDismiss: () => {
-                  setToast(prev => ({ ...prev, visible: false }));
-                  navigation.goBack();
-                }
-              });
-            } catch (error) {
-              console.error('[AdminRegistrationDetails] Error rejecting user:', error);
-              setToast({
-                visible: true,
-                message: 'Não foi possível rejeitar o cadastro. Tente novamente.',
-                variant: 'error',
-                onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
-              });
-            } finally {
-              setIsProcessing(false);
-            }
-          },
-        },
-      ]
-    );
+    try {
+      setIsProcessing(true);
+      await rejectUser(userId);
+      setShowRejectDialog(false);
+      setToast({
+        visible: true,
+        message: 'Cadastro rejeitado.',
+        variant: 'success',
+        onDismiss: () => {
+          setToast(prev => ({ ...prev, visible: false }));
+          navigation.goBack();
+        }
+      });
+    } catch (error) {
+      console.error('[AdminRegistrationDetails] Error rejecting user:', error);
+      setShowRejectDialog(false);
+      setToast({
+        visible: true,
+        message: 'Não foi possível rejeitar o cadastro. Tente novamente.',
+        variant: 'error',
+        onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -217,7 +199,7 @@ export const AdminRegistrationDetailsScreen = () => {
           <View style={styles.actionsContainer}>
             <Button
               title="Rejeitar"
-              onPress={handleReject}
+              onPress={() => setShowRejectDialog(true)}
               variant="outline"
               style={styles.rejectButton}
               disabled={isProcessing || isLoading}
@@ -225,7 +207,7 @@ export const AdminRegistrationDetailsScreen = () => {
             <Spacer size="md" horizontal />
             <Button
               title="Aprovar cadastro"
-              onPress={handleApprove}
+              onPress={() => setShowApproveDialog(true)}
               variant="primary"
               style={styles.approveButton}
               disabled={isProcessing || isLoading}
@@ -234,6 +216,42 @@ export const AdminRegistrationDetailsScreen = () => {
 
         <Spacer size="lg" />
       </View>
+      <Dialog
+        visible={showApproveDialog}
+        title="Aprovar Cadastro"
+        message={`Deseja aprovar o cadastro de ${name}?`}
+        onClose={() => setShowApproveDialog(false)}
+        actions={[
+          {
+            text: 'Cancelar',
+            onPress: () => setShowApproveDialog(false),
+            variant: 'outline'
+          },
+          {
+            text: 'Aprovar',
+            onPress: handleApprove,
+            variant: 'primary'
+          }
+        ]}
+      />
+      <Dialog
+        visible={showRejectDialog}
+        title="Rejeitar Cadastro"
+        message={`Deseja rejeitar o cadastro de ${name}? Esta ação não pode ser desfeita.`}
+        onClose={() => setShowRejectDialog(false)}
+        actions={[
+          {
+            text: 'Cancelar',
+            onPress: () => setShowRejectDialog(false),
+            variant: 'outline'
+          },
+          {
+            text: 'Rejeitar',
+            onPress: handleReject,
+            variant: 'primary'
+          }
+        ]}
+      />
       <Toast
         visible={toast.visible}
         message={toast.message}
