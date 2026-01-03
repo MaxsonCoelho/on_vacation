@@ -10,6 +10,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   active,
   onPress,
   style,
+  activeColor,
 }) => {
   return (
     <Pressable
@@ -19,11 +20,14 @@ export const TabItem: React.FC<TabItemProps> = ({
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
     >
-      <TabIcon name={icon} active={active} />
+      <TabIcon name={icon} active={active} activeColor={activeColor} />
       <Text
         variant="caption"
         color={active ? 'primary' : 'text.disabled'}
-        style={styles.label}
+        style={[
+          styles.label,
+          active && activeColor ? { color: activeColor } : undefined,
+        ]}
         weight={active ? 'medium' : 'regular'}
       >
         {label}

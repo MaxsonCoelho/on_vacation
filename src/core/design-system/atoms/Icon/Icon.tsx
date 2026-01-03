@@ -12,13 +12,18 @@ export const Icon: React.FC<IconProps> = ({
   let resolvedColor = theme.colors.text.primary;
   
   if (color) {
-    const parts = color.split('.');
-    if (parts.length === 2) {
-      // @ts-expect-error - dynamic access to nested theme colors
-      resolvedColor = theme.colors[parts[0]][parts[1]];
+    // Se for uma cor hexadecimal (começa com #), usa diretamente
+    if (color.startsWith('#')) {
+      resolvedColor = color;
     } else {
-      // @ts-expect-error - dynamic access to top-level theme colors
-      resolvedColor = theme.colors[color];
+      const parts = color.split('.');
+      if (parts.length === 2) {
+        // @ts-expect-error - dynamic access to nested theme colors
+        resolvedColor = theme.colors[parts[0]][parts[1]];
+      } else {
+        // @ts-expect-error - dynamic access to top-level theme colors
+        resolvedColor = theme.colors[color];
+      }
     }
   }
 

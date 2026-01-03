@@ -8,13 +8,14 @@ export const TabIcon: React.FC<TabIconProps> = ({
   name,
   active,
   style,
+  activeColor,
 }) => {
   return (
     <View style={[styles.container, style]}>
       <Icon
         name={name}
         size={ICON_SIZE}
-        color={active ? 'primary' : 'text.disabled'}
+        color={active && activeColor ? activeColor : (active ? 'primary' : 'text.disabled')}
       />
     </View>
   );

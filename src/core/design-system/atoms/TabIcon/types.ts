@@ -5,4 +5,5 @@ export interface TabIconProps {
   name: IconName;
   active: boolean;
   style?: StyleProp<ViewStyle>;
+  activeColor?: string;
 }

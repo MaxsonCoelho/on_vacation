@@ -5,6 +5,7 @@ import { AdminUsersStack } from './stacks/AdminUsersStack';
 import { AdminReportsStack } from './stacks/AdminReportsStack';
 import { AdminProfileStack } from './stacks/AdminProfileStack';
 import { GenericBottomTabBar, GenericTabConfig } from '../../../core/design-system/organisms/BottomTabBar/GenericBottomTabBar';
+import { theme } from '../../../core/design-system/tokens';
 
 const Tab = createBottomTabNavigator();
 
@@ -18,7 +19,13 @@ const tabsConfig: GenericTabConfig[] = [
 export const AdminNavigator = () => {
   return (
     <Tab.Navigator
-      tabBar={(props) => <GenericBottomTabBar {...props} tabsConfig={tabsConfig} />}
+      tabBar={(props) => (
+        <GenericBottomTabBar 
+          {...props} 
+          tabsConfig={tabsConfig} 
+          activeColor={theme.colors.brand.admin}
+        />
+      )}
       screenOptions={{
         headerShown: false,
       }}

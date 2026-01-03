@@ -5,6 +5,7 @@ import { ManagerHomeStack } from './stacks/ManagerHomeStack';
 import { ManagerRequestsStack } from './stacks/ManagerRequestsStack';
 import { ManagerProfileStack } from './stacks/ManagerProfileStack';
 import { GenericBottomTabBar, GenericTabConfig } from '../../../core/design-system/organisms/BottomTabBar/GenericBottomTabBar';
+import { theme } from '../../../core/design-system/tokens';
 
 const Tab = createBottomTabNavigator();
 
@@ -17,7 +18,13 @@ const tabsConfig: GenericTabConfig[] = [
 export const ManagerNavigator = () => {
   return (
     <Tab.Navigator
-      tabBar={(props) => <GenericBottomTabBar {...props} tabsConfig={tabsConfig} />}
+      tabBar={(props) => (
+        <GenericBottomTabBar 
+          {...props} 
+          tabsConfig={tabsConfig} 
+          activeColor={theme.colors.brand.manager}
+        />
+      )}
       screenOptions={{
         headerShown: false,
       }}

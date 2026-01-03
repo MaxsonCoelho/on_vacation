@@ -12,4 +12,5 @@ export interface BottomTabBarProps {
   activeKey: string;
   onTabPress: (key: string) => void;
   style?: StyleProp<ViewStyle>;
+  activeColor?: string;
 }

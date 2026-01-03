@@ -10,6 +10,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
   activeKey,
   onTabPress,
   style,
+  activeColor,
 }) => {
   return (
     <SafeArea edges={['bottom']} style={styles.safeArea}>
@@ -21,6 +22,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
             icon={tab.icon}
             active={activeKey === tab.key}
             onPress={() => onTabPress(tab.key)}
+            activeColor={activeColor}
           />
         ))}
       </View>

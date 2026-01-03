@@ -11,10 +11,11 @@ export interface GenericTabConfig {
 
 interface GenericBottomTabBarProps extends BottomTabBarProps {
   tabsConfig: GenericTabConfig[];
+  activeColor?: string;
 }
 
 export const GenericBottomTabBar: React.FC<GenericBottomTabBarProps> = (props) => {
-  const { state, descriptors, navigation, tabsConfig } = props;
+  const { state, descriptors, navigation, tabsConfig, activeColor } = props;
 
   const tabs = state.routes.map((route) => {
     const { options } = descriptors[route.key];
@@ -48,6 +49,7 @@ export const GenericBottomTabBar: React.FC<GenericBottomTabBarProps> = (props) =
           }
         }
       }}
+      activeColor={activeColor}
     />
   );
 };

@@ -7,4 +7,5 @@ export interface TabItemProps {
   active: boolean;
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
+  activeColor?: string;
 }
