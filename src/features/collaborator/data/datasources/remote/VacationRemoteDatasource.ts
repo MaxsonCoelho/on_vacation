@@ -58,6 +58,20 @@ export const createRequestRemote = async (
   const now = new Date().toISOString();
   const requestId = request.id || generateUUID();
   
+  // Verificar se a solicitação já existe (idempotência para sync)
+  if (requestId) {
+    const { data: existingRequest, error: checkError } = await supabase
+      .from('vacation_requests')
+      .select('id')
+      .eq('id', requestId)
+      .single();
+
+    // Se já existe, considera como sucesso (idempotência)
+    if (existingRequest && !checkError) {
+      return; // Solicitação já existe, não precisa criar novamente
+    }
+  }
+  
   const payload = {
     id: requestId,
     user_id: request.userId,
@@ -75,6 +89,10 @@ export const createRequestRemote = async (
     .select();
 
   if (insertError) {
+    // Se o erro é de duplicata, trata como sucesso (idempotência)
+    if (insertError.code === '23505' || insertError.message?.includes('duplicate key')) {
+      return; // Já existe, considera sucesso
+    }
     console.error('[VacationRemoteDatasource] Error creating vacation request:', insertError);
     throw new Error(insertError.message);
   }

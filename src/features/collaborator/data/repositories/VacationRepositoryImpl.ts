@@ -40,24 +40,63 @@ export const VacationRepositoryImpl: VacationRepository = {
     await saveRequestLocal(newRequest);
 
     // 2. Verifica se tem internet e sessão ativa
-    const netState = await NetInfo.fetch();
-    const { data: { session } } = await supabase.auth.getSession();
+    // Tenta verificar rede e sessão, mas não bloqueia por muito tempo
+    let netState: { isConnected: boolean } | null = null;
+    let session: any = null;
     
-    if (netState.isConnected && session) {
-      // 3. Se tiver internet, envia para remoto imediatamente
+    try {
+      const networkPromise = NetInfo.fetch();
+      const sessionPromise = supabase.auth.getSession().then(({ data }) => data.session);
+      
+      // Aguarda até 2 segundos para verificação de rede/sessão
+      const [networkResult, sessionResult] = await Promise.allSettled([
+        Promise.race([networkPromise, new Promise(resolve => setTimeout(() => resolve({ isConnected: false }), 2000))]),
+        Promise.race([sessionPromise, new Promise(resolve => setTimeout(() => resolve(null), 2000))])
+      ]);
+      
+      netState = networkResult.status === 'fulfilled' ? networkResult.value as { isConnected: boolean } : { isConnected: false };
+      session = sessionResult.status === 'fulfilled' ? sessionResult.value : null;
+    } catch {
+      // Se falhar a verificação, assume offline
+      netState = { isConnected: false };
+      session = null;
+    }
+    
+    // Se tiver internet e sessão, SEMPRE tenta criar no remoto imediatamente
+    if (netState?.isConnected && session) {
       try {
+        // Tenta criar no remoto (await para garantir que foi criado)
         await createRequestRemote(newRequest);
+        
+        // Após criar no remoto com sucesso, atualiza o local com os dados do remoto
+        // Isso garante que o local tenha os mesmos dados que o remoto (timestamps, etc)
+        try {
+          const remoteRequests = await getRequestsRemote(request.userId);
+          const createdRequest = remoteRequests.find(r => r.id === newRequest.id);
+          if (createdRequest) {
+            await saveRequestLocal(createdRequest);
+          }
+        } catch (syncError) {
+          // Não é crítico se falhar a sincronização, o remoto já foi atualizado
+        }
         
         // Dispara processamento de fila para garantir que qualquer item pendente seja processado
         SyncWorker.processQueue().catch(() => {
           // Silent fail - will retry later
         });
       } catch (error) {
-        // Se falhar no remoto, enfileira para retry
+        // Se falhar no remoto mesmo estando online, enfileira para retry
         await SyncQueue.enqueue('CREATE_VACATION_REQUEST', newRequest);
+        
+        // Dispara processamento de fila para tentar novamente imediatamente
+        SyncWorker.processQueue().catch(() => {
+          // Silent fail - will retry later
+        });
+        
+        // Não lança erro aqui - funcionou localmente, apenas precisa sincronizar
       }
     } else {
-      // 4. Se não tiver internet, apenas enfileira
+      // Se não tiver internet ou sessão, apenas enfileira
       await SyncQueue.enqueue('CREATE_VACATION_REQUEST', newRequest);
     }
   }

@@ -58,7 +58,18 @@ export const SyncWorker = {
           case 'CREATE_VACATION_REQUEST': {
             // Payload is the VacationRequest object
             const request = item.payload as Partial<VacationRequest>;
-            await createRequestRemote(request);
+            try {
+              await createRequestRemote(request);
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              // Se for erro de duplicata, trata como sucesso (idempotência)
+              if (errorMessage.includes('duplicate key') || errorMessage.includes('23505')) {
+                // Solicitação já existe, considera como sucesso
+                break;
+              }
+              // Outros erros são propagados
+              throw error;
+            }
             break;
           }
             

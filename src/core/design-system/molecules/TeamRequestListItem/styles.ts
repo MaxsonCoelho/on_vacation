@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { RFValue } from 'react-native-responsive-fontsize';
 import { theme } from '../../tokens';
 
 export const styles = StyleSheet.create({
@@ -16,6 +17,7 @@ export const styles = StyleSheet.create({
   },
   dateRange: {
     color: theme.colors.brand.manager,
+    fontSize: RFValue(11),
   },
   statusDot: {
     width: 12,

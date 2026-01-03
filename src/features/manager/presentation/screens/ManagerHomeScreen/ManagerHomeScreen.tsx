@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect } from 'react';
-import { View, Image, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { 
   ScreenContainer, 
@@ -14,6 +14,7 @@ import { theme } from '../../../../../core/design-system/tokens';
 
 export const ManagerHomeScreen = () => {
   const { profile, requests, isLoading, fetchProfile, fetchRequests, subscribeToRealtime, unsubscribeFromRealtime } = useManagerStore();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     return () => unsubscribeFromRealtime();
@@ -26,6 +27,18 @@ export const ManagerHomeScreen = () => {
       subscribeToRealtime();
     }, [])
   );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchProfile(),
+        fetchRequests('Pendentes', true)
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchProfile, fetchRequests]);
 
   const pendingRequests = requests
     .filter(r => r.status === 'pending')
@@ -40,7 +53,20 @@ export const ManagerHomeScreen = () => {
       }
       
       return (
-        <ScreenContainer scrollable edges={['left', 'right']}>
+        <ScreenContainer 
+          scrollable 
+          edges={['left', 'right']}
+          scrollViewProps={{
+            refreshControl: (
+              <RefreshControl 
+                refreshing={refreshing || (isLoading && requests.length > 0)} 
+                onRefresh={onRefresh}
+                colors={[theme.colors.primary]}
+                tintColor={theme.colors.primary}
+              />
+            )
+          }}
+        >
       <View style={styles.container}>
         {/* Saudação */}
         <View style={styles.greeting}>

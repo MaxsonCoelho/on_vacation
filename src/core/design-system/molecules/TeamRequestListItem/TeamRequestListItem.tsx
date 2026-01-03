@@ -45,7 +45,7 @@ export const TeamRequestListItem: React.FC<TeamRequestListItemProps> = ({
         initials={initials} 
       />
       <View style={styles.requestInfo}>
-        <Text variant="body" weight="bold" style={styles.userName}>
+        <Text variant="body" weight="regular" style={styles.userName}>
           {employeeName}
         </Text>
         <Text variant={dateVariant} style={styles.dateRange}>
