@@ -248,6 +248,80 @@ export const updateUserStatusLocal = async (userId: string, status: 'active' | '
   console.log('[AdminLocalDataSource] User status updated locally:', userId, status);
 };
 
+// Função para recalcular reports a partir dos dados locais (chamada após ações offline)
+export const recalculateReportsFromLocal = async (): Promise<AdminReports> => {
+  const db = await getDatabase();
+  
+  // 1. Buscar solicitações do local
+  const requests = await db.getAllAsync<VacationRequestDB>(
+    'SELECT id, status, created_at, updated_at FROM vacation_requests ORDER BY created_at DESC',
+    []
+  );
+  
+  // 2. Buscar usuários do local
+  const users = await db.getAllAsync<UserDB>(
+    'SELECT id, role, status, created_at FROM admin_users',
+    []
+  );
+  
+  // 3. Buscar usuários pendentes do local
+  const pendingUsers = await db.getAllAsync<PendingUserDB>(
+    'SELECT id, role, created_at FROM admin_pending_users',
+    []
+  );
+  
+  // 4. Calcular estatísticas de solicitações
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  
+  const totalRequests = requests.length;
+  const approvedRequests = requests.filter(r => r.status === 'approved').length;
+  const pendingRequests = requests.filter(r => r.status === 'pending').length;
+  const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
+  
+  const requestsThisMonth = requests.filter(r => {
+    const requestDate = new Date(r.created_at);
+    return requestDate >= monthStart;
+  });
+  const newRequestsThisMonth = requestsThisMonth.length;
+  const approvedRequestsThisMonth = requestsThisMonth.filter(r => r.status === 'approved').length;
+  
+  // 5. Calcular estatísticas de usuários
+  const totalCollaborators = users.filter(u => u.role === 'Colaborador').length;
+  const totalManagers = users.filter(u => u.role === 'Gestor').length;
+  const activeCollaborators = users.filter(u => u.role === 'Colaborador' && u.status === 'active').length;
+  const pendingRegistrations = pendingUsers.length;
+  
+  // 6. Calcular novos cadastros deste mês (usuários + pendentes criados este mês)
+  const allUsersThisMonth = [...users, ...pendingUsers].filter(u => {
+    const userDate = new Date(u.created_at);
+    return userDate >= monthStart;
+  });
+  const newRegistrationsThisMonth = allUsersThisMonth.length;
+  
+  const reports: AdminReports = {
+    totalRequests,
+    approvedRequests,
+    pendingRequests,
+    rejectedRequests,
+    totalCollaborators,
+    totalManagers,
+    activeCollaborators,
+    pendingRegistrations,
+    newRequestsThisMonth,
+    approvedRequestsThisMonth,
+    newRegistrationsThisMonth,
+  };
+  
+  // 7. Salvar os reports recalculados no banco local
+  await saveReportsLocal(reports);
+  
+  console.log('[AdminLocalDataSource] Reports recalculated from local data:', reports);
+  
+  return reports;
+};
+
 // Função para sincronizar solicitações do remoto para o local (similar ao manager)
 export const syncRequestsFromRemote = async (requests: Array<{
   id: string;

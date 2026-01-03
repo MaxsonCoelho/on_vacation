@@ -276,6 +276,14 @@ export const AdminRepositoryImpl: AdminRepository = {
     }
     console.log('[AdminRepository] Local update completed for user:', userId);
     
+    // 1.5. Recalcula reports a partir dos dados locais (importante para funcionar offline)
+    try {
+      await Local.recalculateReportsFromLocal();
+      console.log('[AdminRepository] Reports recalculated from local data after approval');
+    } catch (recalcError) {
+      console.warn('[AdminRepository] Error recalculating reports (non-critical):', recalcError);
+    }
+    
     // 2. Verifica se tem internet e sessão ativa
     const netState = await NetInfo.fetch();
     const { data: { session } } = await supabase.auth.getSession();
@@ -330,6 +338,14 @@ export const AdminRepositoryImpl: AdminRepository = {
       throw error;
     }
     
+    // 1.5. Recalcula reports a partir dos dados locais (importante para funcionar offline)
+    try {
+      await Local.recalculateReportsFromLocal();
+      console.log('[AdminRepository] Reports recalculated from local data after rejection');
+    } catch (recalcError) {
+      console.warn('[AdminRepository] Error recalculating reports (non-critical):', recalcError);
+    }
+    
     // 2. Verifica se tem internet e sessão ativa
     const netState = await NetInfo.fetch();
     const { data: { session } } = await supabase.auth.getSession();
@@ -365,6 +381,14 @@ export const AdminRepositoryImpl: AdminRepository = {
     // 1. SEMPRE atualiza local primeiro (optimistic update)
     await Local.updateUserStatusLocal(userId, status);
     console.log('[AdminRepository] Local update completed for user:', userId, 'Status:', status);
+    
+    // 1.5. Recalcula reports a partir dos dados locais (importante para funcionar offline)
+    try {
+      await Local.recalculateReportsFromLocal();
+      console.log('[AdminRepository] Reports recalculated from local data after status update');
+    } catch (recalcError) {
+      console.warn('[AdminRepository] Error recalculating reports (non-critical):', recalcError);
+    }
     
     // 2. Verifica se tem internet e sessão ativa
     const netState = await NetInfo.fetch();
