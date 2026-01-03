@@ -10,3 +10,4 @@ export * from './KeyboardSpacer';
 export * from './Avatar';
 export * from './HeaderBackButton';
 export * from './HeaderIconAction';
+export * from './ProfileTag';

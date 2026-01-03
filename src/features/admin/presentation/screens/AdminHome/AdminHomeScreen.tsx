@@ -7,17 +7,20 @@ import {
   ScreenContainer, 
   Text, 
   Card, 
-  Spacer 
+  Spacer,
+  ProfileTag
 } from '../../../../../core/design-system';
 import { useAdminStore } from '../../store/useAdminStore';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
 import { AdminHomeStackParamList } from '../../../../../app/navigation/admin/stacks/AdminHomeStack';
+import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
 
 type NavigationProp = NativeStackNavigationProp<AdminHomeStackParamList>;
 
 export const AdminHomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { user } = useAuthStore();
   const { 
     reports, 
     isLoading, 
@@ -63,6 +66,7 @@ export const AdminHomeScreen = () => {
   return (
     <ScreenContainer scrollable edges={['left', 'right']}>
       <View style={styles.container}>
+        {user?.role && <ProfileTag role={user.role} />}
         {/* Métricas */}
         <View style={styles.metricsRow}>
           <Card style={styles.metricCard} padding="md">

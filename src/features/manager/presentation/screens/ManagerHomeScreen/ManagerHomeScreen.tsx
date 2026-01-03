@@ -6,14 +6,17 @@ import {
   Text, 
   Card, 
   Spacer,
-  TeamRequestListItem
+  TeamRequestListItem,
+  ProfileTag
 } from '../../../../../core/design-system';
 import { styles } from './styles';
 import { useManagerStore } from '../../store/useManagerStore';
 import { theme } from '../../../../../core/design-system/tokens';
+import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
 
 export const ManagerHomeScreen = () => {
   const { profile, requests, isLoading, fetchProfile, fetchRequests, subscribeToRealtime, unsubscribeFromRealtime } = useManagerStore();
+  const { user } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -68,6 +71,7 @@ export const ManagerHomeScreen = () => {
           }}
         >
       <View style={styles.container}>
+        {user?.role && <ProfileTag role={user.role} />}
         {/* Saudação */}
         <View style={styles.greeting}>
           <Text variant="h1" weight="bold">

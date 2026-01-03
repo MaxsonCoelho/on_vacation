@@ -6,7 +6,8 @@ import {
   Button, 
   Card, 
   Icon, 
-  Spacer 
+  Spacer,
+  ProfileTag
 } from '../../../../../core/design-system';
 import { useAuthStore } from '../../../../auth/presentation/store/useAuthStore';
 import { useVacationStore } from '../../store/useVacationStore';
@@ -63,6 +64,7 @@ export const CollaboratorHomeScreen = () => {
   return (
     <ScreenContainer scrollable edges={['left', 'right']}>
       <View style={styles.container}>
+        {user?.role && <ProfileTag role={user.role} />}
         {/* Greeting */}
         <View style={styles.greeting}>
           <Text variant="h1" weight="bold">
