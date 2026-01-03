@@ -87,6 +87,11 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
     approveUser: async (userId: string) => {
       set({ isLoading: true, error: null });
+      
+      // Salva estado inicial para verificar se funcionou
+      const initialPendingUsers = get().pendingUsers;
+      const userWasPending = initialPendingUsers.find(u => u.id === userId);
+      
       try {
         const approve = approveUserUseCase(AdminRepositoryImpl);
         await approve(userId);
@@ -123,27 +128,53 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        // Verifica se o erro é porque não encontrou o usuário pendente (pode acontecer offline)
-        // Se funcionou localmente (usuário foi removido de pending), não é um erro real
+        
+        // Verifica se funcionou localmente (usuário foi removido de pending ou está em users)
+        const { getUsersLocal } = await import('../../data/datasources/local/AdminLocalDataSource');
+        const localUsers = await getUsersLocal();
+        const approvedUserLocal = localUsers.find(u => u.id === userId);
         const currentPendingUsers = get().pendingUsers;
         const userStillPending = currentPendingUsers.find(u => u.id === userId);
         
-        // Se o usuário não está mais em pending, significa que funcionou localmente
-        // Só lança erro se realmente falhou (usuário ainda está em pending)
-        if (userStillPending) {
+        // Se o usuário foi aprovado localmente (está em users ou não está mais em pending), funcionou
+        const workedLocally = approvedUserLocal || (!userStillPending && userWasPending);
+        
+        if (workedLocally) {
+          // Funcionou localmente - atualiza estado e não lança erro
+          console.log('[AdminStore] User approved locally (offline mode). Error was non-critical:', errorMessage);
+          
+          const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
+          const currentUsers = get().users;
+          let updatedUsers = currentUsers;
+          
+          if (approvedUserLocal) {
+            const userExists = currentUsers.find(u => u.id === userId);
+            if (!userExists) {
+              updatedUsers = [...currentUsers, approvedUserLocal];
+            }
+          }
+          
+          set({ 
+            pendingUsers: updatedPendingUsers, 
+            users: updatedUsers,
+            isLoading: false 
+          });
+        } else {
+          // Realmente falhou - lança erro
           console.error('[AdminStore] Error approving user:', errorMessage);
           set({ error: errorMessage, isLoading: false });
           throw error;
-        } else {
-          // Funcionou localmente, apenas loga mas não lança erro
-          console.log('[AdminStore] User approved locally (offline mode). Error was non-critical:', errorMessage);
-          set({ isLoading: false });
         }
       }
     },
 
   rejectUser: async (userId: string) => {
     set({ isLoading: true, error: null });
+    
+    // Salva estado inicial para verificar se funcionou
+    const initialPendingUsers = get().pendingUsers;
+    const userWasPending = initialPendingUsers.find(u => u.id === userId);
+    
     try {
       const reject = rejectUserUseCase(AdminRepositoryImpl);
       await reject(userId);
@@ -159,9 +190,25 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[AdminStore] Error rejecting user:', errorMessage);
-      set({ error: errorMessage, isLoading: false });
-      throw error;
+      
+      // Verifica se funcionou localmente (usuário foi removido de pending)
+      const currentPendingUsers = get().pendingUsers;
+      const userStillPending = currentPendingUsers.find(u => u.id === userId);
+      
+      // Se o usuário foi removido de pending, funcionou localmente
+      const workedLocally = !userStillPending && userWasPending;
+      
+      if (workedLocally) {
+        // Funcionou localmente - atualiza estado e não lança erro
+        console.log('[AdminStore] User rejected locally (offline mode). Error was non-critical:', errorMessage);
+        const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
+        set({ pendingUsers: updatedPendingUsers, isLoading: false });
+      } else {
+        // Realmente falhou - lança erro
+        console.error('[AdminStore] Error rejecting user:', errorMessage);
+        set({ error: errorMessage, isLoading: false });
+        throw error;
+      }
     }
   },
 
