@@ -8,7 +8,9 @@ import {
   Avatar, 
   Button,
   Spacer,
-  Card
+  Card,
+  Toast,
+  ToastProps
 } from '../../../../../core/design-system';
 import { useAdminStore } from '../../store/useAdminStore';
 import { styles } from './styles';
@@ -42,6 +44,11 @@ export const AdminRegistrationDetailsScreen = () => {
   
   const { approveUser, rejectUser, isLoading } = useAdminStore();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [toast, setToast] = useState<ToastProps>({
+    visible: false,
+    message: '',
+    variant: 'success',
+  });
   
   const initials = name.split(' ').map((n: string) => n[0]).join('').substring(0, 2);
 
@@ -57,11 +64,23 @@ export const AdminRegistrationDetailsScreen = () => {
             try {
               setIsProcessing(true);
               await approveUser(userId);
-              Alert.alert('Sucesso', 'Cadastro aprovado com sucesso!', [
-                { text: 'OK', onPress: () => navigation.goBack() }
-              ]);
+              setToast({
+                visible: true,
+                message: 'Cadastro aprovado com sucesso!',
+                variant: 'success',
+                onDismiss: () => {
+                  setToast(prev => ({ ...prev, visible: false }));
+                  navigation.goBack();
+                }
+              });
             } catch (error) {
-              Alert.alert('Erro', 'Não foi possível aprovar o cadastro. Tente novamente.');
+              console.error('[AdminRegistrationDetails] Error approving user:', error);
+              setToast({
+                visible: true,
+                message: 'Não foi possível aprovar o cadastro. Tente novamente.',
+                variant: 'error',
+                onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
+              });
             } finally {
               setIsProcessing(false);
             }
@@ -84,11 +103,23 @@ export const AdminRegistrationDetailsScreen = () => {
             try {
               setIsProcessing(true);
               await rejectUser(userId);
-              Alert.alert('Sucesso', 'Cadastro rejeitado.', [
-                { text: 'OK', onPress: () => navigation.goBack() }
-              ]);
+              setToast({
+                visible: true,
+                message: 'Cadastro rejeitado.',
+                variant: 'success',
+                onDismiss: () => {
+                  setToast(prev => ({ ...prev, visible: false }));
+                  navigation.goBack();
+                }
+              });
             } catch (error) {
-              Alert.alert('Erro', 'Não foi possível rejeitar o cadastro. Tente novamente.');
+              console.error('[AdminRegistrationDetails] Error rejecting user:', error);
+              setToast({
+                visible: true,
+                message: 'Não foi possível rejeitar o cadastro. Tente novamente.',
+                variant: 'error',
+                onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
+              });
             } finally {
               setIsProcessing(false);
             }
@@ -203,6 +234,13 @@ export const AdminRegistrationDetailsScreen = () => {
 
         <Spacer size="lg" />
       </View>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        variant={toast.variant}
+        duration={1500}
+        onDismiss={toast.onDismiss}
+      />
     </ScreenContainer>
   );
 };

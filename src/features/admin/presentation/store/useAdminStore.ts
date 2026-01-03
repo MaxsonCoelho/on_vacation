@@ -85,25 +85,62 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     }
   },
 
-  approveUser: async (userId: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      const approve = approveUserUseCase(AdminRepositoryImpl);
-      await approve(userId);
-      
-      // Atualiza estado local
-      const currentPendingUsers = get().pendingUsers;
-      const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
-      set({ pendingUsers: updatedPendingUsers, isLoading: false });
-      
-      // Atualiza relatórios
-      get().fetchReports(false);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      set({ error: errorMessage, isLoading: false });
-      throw error;
-    }
-  },
+    approveUser: async (userId: string) => {
+      set({ isLoading: true, error: null });
+      try {
+        const approve = approveUserUseCase(AdminRepositoryImpl);
+        await approve(userId);
+        
+        // Atualiza estado local
+        const currentPendingUsers = get().pendingUsers;
+        const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
+        
+        // Busca o usuário aprovado localmente para adicionar à lista de usuários ativos
+        const { getUsersLocal } = await import('../../data/datasources/local/AdminLocalDataSource');
+        const localUsers = await getUsersLocal();
+        const approvedUser = localUsers.find(u => u.id === userId);
+        
+        const currentUsers = get().users;
+        let updatedUsers = currentUsers;
+        
+        // Se encontrou o usuário aprovado localmente, adiciona à lista (evita duplicatas)
+        if (approvedUser) {
+          const userExists = currentUsers.find(u => u.id === userId);
+          if (!userExists) {
+            updatedUsers = [...currentUsers, approvedUser];
+          }
+        }
+        
+        set({ 
+          pendingUsers: updatedPendingUsers, 
+          users: updatedUsers,
+          isLoading: false 
+        });
+        
+        // Atualiza relatórios (sem lançar erro se falhar)
+        get().fetchReports(false).catch(err => {
+          console.warn('[AdminStore] Error fetching reports after approval (non-critical):', err);
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        // Verifica se o erro é porque não encontrou o usuário pendente (pode acontecer offline)
+        // Se funcionou localmente (usuário foi removido de pending), não é um erro real
+        const currentPendingUsers = get().pendingUsers;
+        const userStillPending = currentPendingUsers.find(u => u.id === userId);
+        
+        // Se o usuário não está mais em pending, significa que funcionou localmente
+        // Só lança erro se realmente falhou (usuário ainda está em pending)
+        if (userStillPending) {
+          console.error('[AdminStore] Error approving user:', errorMessage);
+          set({ error: errorMessage, isLoading: false });
+          throw error;
+        } else {
+          // Funcionou localmente, apenas loga mas não lança erro
+          console.log('[AdminStore] User approved locally (offline mode). Error was non-critical:', errorMessage);
+          set({ isLoading: false });
+        }
+      }
+    },
 
   rejectUser: async (userId: string) => {
     set({ isLoading: true, error: null });
@@ -116,10 +153,13 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
       set({ pendingUsers: updatedPendingUsers, isLoading: false });
       
-      // Atualiza relatórios
-      get().fetchReports(false);
+      // Atualiza relatórios (sem lançar erro se falhar)
+      get().fetchReports(false).catch(err => {
+        console.warn('[AdminStore] Error fetching reports after rejection (non-critical):', err);
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[AdminStore] Error rejecting user:', errorMessage);
       set({ error: errorMessage, isLoading: false });
       throw error;
     }
@@ -138,10 +178,13 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       );
       set({ users: updatedUsers, isLoading: false });
       
-      // Atualiza relatórios
-      get().fetchReports(false);
+      // Atualiza relatórios (sem lançar erro se falhar)
+      get().fetchReports(false).catch(err => {
+        console.warn('[AdminStore] Error fetching reports after status update (non-critical):', err);
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[AdminStore] Error updating user status:', errorMessage);
       set({ error: errorMessage, isLoading: false });
       throw error;
     }

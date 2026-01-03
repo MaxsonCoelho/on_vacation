@@ -190,19 +190,103 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
 };
 
 export const approveRequestRemote = async (requestId: string, notes?: string): Promise<void> => {
-  const { error } = await supabase
+  const now = new Date().toISOString();
+  
+  console.log('[ManagerRemoteDataSource] Starting approval for request:', requestId);
+  
+  // 1. Atualizar status na tabela vacation_requests
+  const { data: updateData, error: updateError } = await supabase
     .from('vacation_requests')
-    .update({ status: 'approved', manager_notes: notes, updated_at: new Date().toISOString() })
-    .eq('id', requestId);
+    .update({ 
+      status: 'approved', 
+      manager_notes: notes, 
+      updated_at: now 
+    })
+    .eq('id', requestId)
+    .select();
 
-  if (error) throw error;
+  if (updateError) {
+    console.error('[ManagerRemoteDataSource] Error updating vacation_requests:', updateError);
+    throw updateError;
+  }
+
+  if (!updateData || updateData.length === 0) {
+    const error = new Error(`No rows updated for request ${requestId}. Request may not exist or RLS blocked the update.`);
+    console.error('[ManagerRemoteDataSource]', error.message);
+    throw error;
+  }
+
+  console.log('[ManagerRemoteDataSource] vacation_requests updated successfully:', updateData);
+
+  // 2. Inserir registro no histórico de status
+  const { data: historyData, error: historyError } = await supabase
+    .from('vacation_status_history')
+    .insert({
+      request_id: requestId,
+      status: 'approved',
+      label: 'Aprovada',
+      notes: notes || null,
+      created_at: now
+    })
+    .select();
+
+  if (historyError) {
+    // Log o erro mas não falha a operação principal se o histórico falhar
+    // Isso garante que a atualização do status sempre aconteça
+    console.warn('[ManagerRemoteDataSource] Error inserting status history (non-critical):', historyError);
+    // Não lança erro para não bloquear a atualização principal
+  } else {
+    console.log('[ManagerRemoteDataSource] Status history recorded successfully:', historyData);
+  }
 };
 
 export const rejectRequestRemote = async (requestId: string, notes?: string): Promise<void> => {
-  const { error } = await supabase
+  const now = new Date().toISOString();
+  
+  console.log('[ManagerRemoteDataSource] Starting rejection for request:', requestId);
+  
+  // 1. Atualizar status na tabela vacation_requests
+  const { data: updateData, error: updateError } = await supabase
     .from('vacation_requests')
-    .update({ status: 'rejected', manager_notes: notes, updated_at: new Date().toISOString() })
-    .eq('id', requestId);
+    .update({ 
+      status: 'rejected', 
+      manager_notes: notes, 
+      updated_at: now 
+    })
+    .eq('id', requestId)
+    .select();
 
-  if (error) throw error;
+  if (updateError) {
+    console.error('[ManagerRemoteDataSource] Error updating vacation_requests:', updateError);
+    throw updateError;
+  }
+
+  if (!updateData || updateData.length === 0) {
+    const error = new Error(`No rows updated for request ${requestId}. Request may not exist or RLS blocked the update.`);
+    console.error('[ManagerRemoteDataSource]', error.message);
+    throw error;
+  }
+
+  console.log('[ManagerRemoteDataSource] vacation_requests updated successfully:', updateData);
+
+  // 2. Inserir registro no histórico de status
+  const { data: historyData, error: historyError } = await supabase
+    .from('vacation_status_history')
+    .insert({
+      request_id: requestId,
+      status: 'rejected',
+      label: 'Reprovada',
+      notes: notes || null,
+      created_at: now
+    })
+    .select();
+
+  if (historyError) {
+    // Log o erro mas não falha a operação principal se o histórico falhar
+    // Isso garante que a atualização do status sempre aconteça
+    console.warn('[ManagerRemoteDataSource] Error inserting status history (non-critical):', historyError);
+    // Não lança erro para não bloquear a atualização principal
+  } else {
+    console.log('[ManagerRemoteDataSource] Status history recorded successfully:', historyData);
+  }
 };

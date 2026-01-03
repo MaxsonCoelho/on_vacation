@@ -1,5 +1,6 @@
 import { supabase } from '../../../../../core/services/supabase';
 import { VacationRequest, VacationStatus } from '../../../domain/entities/VacationRequest';
+import { generateUUID } from '../../../../../core/utils';
 
 interface VacationRequestDB {
   id: string;
@@ -56,8 +57,11 @@ export const createRequestRemote = async (
     throw new Error('Missing required fields');
   }
 
+  const now = new Date().toISOString();
+  const requestId = request.id || generateUUID();
+  
   const payload = {
-    id: request.id, // Send local ID if exists
+    id: requestId,
     user_id: request.userId,
     title: request.title,
     start_date: new Date(request.startDate.split('/').reverse().join('-')), // Convert DD/MM/YYYY to YYYY-MM-DD
@@ -66,12 +70,37 @@ export const createRequestRemote = async (
     status: request.status || 'pending',
   };
 
-  console.log('[RemoteDatasource] Creating request payload:', JSON.stringify(payload));
+  console.log('[VacationRemoteDatasource] Creating request payload:', JSON.stringify(payload));
 
-  const { error } = await supabase.from('vacation_requests').insert(payload);
+  // 1. Criar solicitação na tabela vacation_requests
+  const { data: insertData, error: insertError } = await supabase
+    .from('vacation_requests')
+    .insert(payload)
+    .select();
 
-  if (error) {
-    console.error('Error creating vacation request:', error);
-    throw new Error(error.message);
+  if (insertError) {
+    console.error('[VacationRemoteDatasource] Error creating vacation request:', insertError);
+    throw new Error(insertError.message);
+  }
+
+  console.log('[VacationRemoteDatasource] Request created successfully:', insertData);
+
+  // 2. Criar registro inicial no histórico de status
+  const { data: historyData, error: historyError } = await supabase
+    .from('vacation_status_history')
+    .insert({
+      request_id: requestId,
+      status: request.status || 'pending',
+      label: 'Solicitada',
+      notes: request.collaboratorNotes || null,
+      created_at: now
+    })
+    .select();
+
+  if (historyError) {
+    // Log o erro mas não falha a operação principal se o histórico falhar
+    console.warn('[VacationRemoteDatasource] Error inserting initial status history (non-critical):', historyError);
+  } else {
+    console.log('[VacationRemoteDatasource] Initial status history recorded:', historyData);
   }
 };

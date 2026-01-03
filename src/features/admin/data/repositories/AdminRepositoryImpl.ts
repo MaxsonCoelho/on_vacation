@@ -5,17 +5,75 @@ import { User } from '../../domain/entities/User';
 import * as Local from '../datasources/local/AdminLocalDataSource';
 import * as Remote from '../datasources/remote/AdminRemoteDataSource';
 import { SyncQueue } from '../../../../core/offline/queue/SyncQueue';
+import { SyncWorker } from '../../../../core/offline/queue/SyncWorker';
+import { QueueRepository } from '../../../../core/offline/queue/QueueRepository';
 import { getDatabase } from '../../../../core/offline/database/connection';
+import NetInfo from '@react-native-community/netinfo';
+import { supabase } from '../../../../core/services/supabase';
 
 export const AdminRepositoryImpl: AdminRepository = {
   getReports: async (): Promise<AdminReports> => {
     console.log('[AdminRepository] Getting reports...');
     
-    // Sempre calcula do banco local primeiro (fonte mais confiável devido a RLS)
+    // 1. Verifica se tem internet e sessão ativa para sincronizar
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // 1.5. PRIMEIRO: Processa a fila de sincronização para enviar mudanças locais ao remoto
+    // Isso garante que aprovações/rejeições offline sejam sincronizadas ANTES de buscar dados
+    if (netState.isConnected && session) {
+      const pendingQueueItems = await QueueRepository.getPending();
+      if (pendingQueueItems.length > 0) {
+        console.log(`[AdminRepository] Found ${pendingQueueItems.length} pending sync items. Processing queue first...`);
+        try {
+          await SyncWorker.processQueue();
+          console.log('[AdminRepository] Sync queue processed. Now fetching updated data from remote...');
+        } catch (error) {
+          console.warn('[AdminRepository] Error processing sync queue (will continue with fetch):', error);
+        }
+      }
+    }
+    
+    // 2. Se tem internet, SEMPRE tenta sincronizar solicitações do remoto
+    if (netState.isConnected && session) {
+      try {
+        console.log('[AdminRepository] Online - syncing requests from remote...');
+        const remoteRequests = await Remote.getRequestsRemoteForSync();
+        
+        if (remoteRequests && remoteRequests.length > 0) {
+          // Buscar profiles para os user_ids das solicitações
+          const userIds = [...new Set(remoteRequests.map(r => r.user_id))];
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, name, avatar_url')
+            .in('id', userIds);
+          
+          const profilesMap = new Map(profilesData?.map(p => [p.id, { name: p.name, avatar_url: p.avatar_url }]) || []);
+          
+          // Adicionar requester_name e requester_avatar às solicitações
+          const requestsWithProfiles = remoteRequests.map(req => ({
+            ...req,
+            requester_name: profilesMap.get(req.user_id)?.name || null,
+            requester_avatar: profilesMap.get(req.user_id)?.avatar_url || null,
+          }));
+          
+          // Sincronizar para o banco local (isso atualiza/insere todas as solicitações)
+          await Local.syncRequestsFromRemote(requestsWithProfiles);
+          console.log('[AdminRepository] Synced', requestsWithProfiles.length, 'requests to local database');
+        } else {
+          console.log('[AdminRepository] Remote returned 0 requests (RLS may block or no data)');
+        }
+      } catch (error) {
+        console.warn('[AdminRepository] Error syncing requests from remote:', error);
+        // Continua com dados locais mesmo se sync falhar
+      }
+    }
+    
+    // 3. Calcula do banco local (agora tem dados sincronizados do remoto se houver internet)
     const reportsFromLocal = await getReportsFromLocalDatabase();
     console.log('[AdminRepository] Local database reports:', reportsFromLocal.totalRequests, 'requests');
     
-    // Tenta buscar perfis do remoto para estatísticas de usuários
+    // 3. Tenta buscar perfis do remoto para estatísticas de usuários
     try {
       const remoteReports = await Remote.getReportsRemote();
       
@@ -61,21 +119,47 @@ export const AdminRepositoryImpl: AdminRepository = {
   getPendingUsers: async (): Promise<PendingUser[]> => {
     console.log('[AdminRepository] Getting pending users...');
     
-    try {
-      const remoteUsers = await Remote.getPendingUsersRemote();
-      
-      // Salva localmente para cache
-      try {
-        await Local.savePendingUsersLocal(remoteUsers);
-      } catch (saveError) {
-        console.warn('[AdminRepository] Error saving pending users to local DB:', saveError);
+    // Verifica se tem internet e sessão antes de tentar buscar do remoto
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (netState.isConnected && session) {
+      // PRIMEIRO: Processa a fila de sincronização para enviar mudanças locais ao remoto
+      // Isso garante que aprovações/rejeições offline sejam sincronizadas ANTES de buscar dados
+      const pendingQueueItems = await QueueRepository.getPending();
+      if (pendingQueueItems.length > 0) {
+        console.log(`[AdminRepository] Found ${pendingQueueItems.length} pending sync items. Processing queue first...`);
+        try {
+          await SyncWorker.processQueue();
+          console.log('[AdminRepository] Sync queue processed. Now fetching updated data from remote...');
+        } catch (error) {
+          console.warn('[AdminRepository] Error processing sync queue (will continue with fetch):', error);
+        }
       }
       
-      return remoteUsers;
-    } catch (error) {
-      console.warn('[AdminRepository] Error fetching remote pending users, using local cache:', error);
-      
-      // Se falhar, retorna cache local
+      try {
+        console.log('[AdminRepository] Online - fetching pending users from remote...');
+        const remoteUsers = await Remote.getPendingUsersRemote();
+        console.log('[AdminRepository] Remote pending users fetched:', remoteUsers.length);
+        
+        // Salva localmente para cache
+        try {
+          await Local.savePendingUsersLocal(remoteUsers);
+          console.log('[AdminRepository] Pending users saved to local database');
+        } catch (saveError) {
+          console.warn('[AdminRepository] Error saving pending users to local DB:', saveError);
+        }
+        
+        return remoteUsers;
+      } catch (error) {
+        console.warn('[AdminRepository] Error fetching remote pending users, using local cache:', error);
+        
+        // Se falhar, retorna cache local
+        return await Local.getPendingUsersLocal();
+      }
+    } else {
+      // Se não tiver internet, retorna diretamente do local
+      console.log('[AdminRepository] Offline - using local pending users');
       return await Local.getPendingUsersLocal();
     }
   },
@@ -83,21 +167,47 @@ export const AdminRepositoryImpl: AdminRepository = {
   getUsers: async (filter?: string): Promise<User[]> => {
     console.log('[AdminRepository] Getting users...');
     
-    try {
-      const remoteUsers = await Remote.getUsersRemote(filter);
-      
-      // Salva localmente para cache
-      try {
-        await Local.saveUsersLocal(remoteUsers);
-      } catch (saveError) {
-        console.warn('[AdminRepository] Error saving users to local DB:', saveError);
+    // Verifica se tem internet e sessão antes de tentar buscar do remoto
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (netState.isConnected && session) {
+      // PRIMEIRO: Processa a fila de sincronização para enviar mudanças locais ao remoto
+      // Isso garante que aprovações/rejeições offline sejam sincronizadas ANTES de buscar dados
+      const pendingQueueItems = await QueueRepository.getPending();
+      if (pendingQueueItems.length > 0) {
+        console.log(`[AdminRepository] Found ${pendingQueueItems.length} pending sync items. Processing queue first...`);
+        try {
+          await SyncWorker.processQueue();
+          console.log('[AdminRepository] Sync queue processed. Now fetching updated data from remote...');
+        } catch (error) {
+          console.warn('[AdminRepository] Error processing sync queue (will continue with fetch):', error);
+        }
       }
       
-      return remoteUsers;
-    } catch (error) {
-      console.warn('[AdminRepository] Error fetching remote users, using local cache:', error);
-      
-      // Se falhar, retorna cache local
+      try {
+        console.log('[AdminRepository] Online - fetching users from remote...');
+        const remoteUsers = await Remote.getUsersRemote(filter);
+        console.log('[AdminRepository] Remote users fetched:', remoteUsers.length);
+        
+        // Salva localmente para cache
+        try {
+          await Local.saveUsersLocal(remoteUsers);
+          console.log('[AdminRepository] Users saved to local database');
+        } catch (saveError) {
+          console.warn('[AdminRepository] Error saving users to local DB:', saveError);
+        }
+        
+        return remoteUsers;
+      } catch (error) {
+        console.warn('[AdminRepository] Error fetching remote users, using local cache:', error);
+        
+        // Se falhar, retorna cache local
+        return await Local.getUsersLocal(filter);
+      }
+    } else {
+      // Se não tiver internet, retorna diretamente do local
+      console.log('[AdminRepository] Offline - using local users');
       return await Local.getUsersLocal(filter);
     }
   },
@@ -105,48 +215,113 @@ export const AdminRepositoryImpl: AdminRepository = {
   approveUser: async (userId: string): Promise<void> => {
     console.log('[AdminRepository] Approving user:', userId);
     
-    // Atualiza localmente primeiro (optimistic UI)
-    // Não temos tabela local para atualizar diretamente, então apenas enfileira
+    // 1. SEMPRE atualiza local primeiro (optimistic update)
+    const approvedUser = await Local.approveUserLocal(userId);
+    if (!approvedUser) {
+      throw new Error(`Pending user not found: ${userId}`);
+    }
+    console.log('[AdminRepository] Local update completed for user:', userId);
     
-    // Enfileira para sincronização
-    await SyncQueue.enqueue('APPROVE_USER', { userId });
+    // 2. Verifica se tem internet e sessão ativa
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
     
-    // Tenta executar imediatamente se online
-    try {
-      await Remote.approveUserRemote(userId);
-    } catch (error) {
-      console.warn('[AdminRepository] Error approving user remotely, queued for sync:', error);
-      // Já está na fila, vai tentar novamente depois
+    if (netState.isConnected && session) {
+      // Se tiver internet, atualiza remoto imediatamente
+      try {
+        console.log('[AdminRepository] Online - updating remote immediately. User:', userId);
+        await Remote.approveUserRemote(userId);
+        console.log('[AdminRepository] Remote update successful. User:', userId);
+        
+        // Dispara processamento de fila para garantir que qualquer item pendente seja processado
+        SyncWorker.processQueue().catch(err => {
+          console.warn('[AdminRepository] Error processing queue after approval:', err);
+        });
+      } catch (error) {
+        // Se falhar no remoto, enfileira para retry
+        console.error('[AdminRepository] Remote update failed, queuing for retry:', error);
+        await SyncQueue.enqueue('APPROVE_USER', { userId });
+        console.log('[AdminRepository] User queued for sync:', userId);
+        // NÃO lança erro aqui - funcionou localmente, apenas enfileira para sync
+      }
+    } else {
+      // Se não tiver internet, apenas enfileira
+      console.log('[AdminRepository] Offline - queuing for sync. User:', userId);
+      await SyncQueue.enqueue('APPROVE_USER', { userId });
+      console.log('[AdminRepository] User queued for sync:', userId);
+      // NÃO lança erro aqui - funcionou localmente, apenas enfileira para sync
     }
   },
 
   rejectUser: async (userId: string): Promise<void> => {
     console.log('[AdminRepository] Rejecting user:', userId);
     
-    // Enfileira para sincronização
-    await SyncQueue.enqueue('REJECT_USER', { userId });
+    // 1. SEMPRE atualiza local primeiro (optimistic update)
+    await Local.rejectUserLocal(userId);
+    console.log('[AdminRepository] Local update completed for user:', userId);
     
-    // Tenta executar imediatamente se online
-    try {
-      await Remote.rejectUserRemote(userId);
-    } catch (error) {
-      console.warn('[AdminRepository] Error rejecting user remotely, queued for sync:', error);
-      // Já está na fila, vai tentar novamente depois
+    // 2. Verifica se tem internet e sessão ativa
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (netState.isConnected && session) {
+      // Se tiver internet, atualiza remoto imediatamente
+      try {
+        console.log('[AdminRepository] Online - updating remote immediately. User:', userId);
+        await Remote.rejectUserRemote(userId);
+        console.log('[AdminRepository] Remote update successful. User:', userId);
+        
+        // Dispara processamento de fila para garantir que qualquer item pendente seja processado
+        SyncWorker.processQueue().catch(err => {
+          console.warn('[AdminRepository] Error processing queue after rejection:', err);
+        });
+      } catch (error) {
+        // Se falhar no remoto, enfileira para retry
+        console.error('[AdminRepository] Remote update failed, queuing for retry:', error);
+        await SyncQueue.enqueue('REJECT_USER', { userId });
+        console.log('[AdminRepository] User queued for sync:', userId);
+      }
+    } else {
+      // Se não tiver internet, apenas enfileira
+      console.log('[AdminRepository] Offline - queuing for sync. User:', userId);
+      await SyncQueue.enqueue('REJECT_USER', { userId });
+      console.log('[AdminRepository] User queued for sync:', userId);
     }
   },
 
   updateUserStatus: async (userId: string, status: 'active' | 'inactive'): Promise<void> => {
     console.log('[AdminRepository] Updating user status:', userId, status);
     
-    // Enfileira para sincronização
-    await SyncQueue.enqueue('UPDATE_USER_STATUS', { userId, status });
+    // 1. SEMPRE atualiza local primeiro (optimistic update)
+    await Local.updateUserStatusLocal(userId, status);
+    console.log('[AdminRepository] Local update completed for user:', userId, 'Status:', status);
     
-    // Tenta executar imediatamente se online
-    try {
-      await Remote.updateUserStatusRemote(userId, status);
-    } catch (error) {
-      console.warn('[AdminRepository] Error updating user status remotely, queued for sync:', error);
-      // Já está na fila, vai tentar novamente depois
+    // 2. Verifica se tem internet e sessão ativa
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (netState.isConnected && session) {
+      // Se tiver internet, atualiza remoto imediatamente
+      try {
+        console.log('[AdminRepository] Online - updating remote immediately. User:', userId, 'Status:', status);
+        await Remote.updateUserStatusRemote(userId, status);
+        console.log('[AdminRepository] Remote update successful. User:', userId, 'Status:', status);
+        
+        // Dispara processamento de fila para garantir que qualquer item pendente seja processado
+        SyncWorker.processQueue().catch(err => {
+          console.warn('[AdminRepository] Error processing queue after status update:', err);
+        });
+      } catch (error) {
+        // Se falhar no remoto, enfileira para retry
+        console.error('[AdminRepository] Remote update failed, queuing for retry:', error);
+        await SyncQueue.enqueue('UPDATE_USER_STATUS', { userId, status });
+        console.log('[AdminRepository] User queued for sync:', userId);
+      }
+    } else {
+      // Se não tiver internet, apenas enfileira
+      console.log('[AdminRepository] Offline - queuing for sync. User:', userId);
+      await SyncQueue.enqueue('UPDATE_USER_STATUS', { userId, status });
+      console.log('[AdminRepository] User queued for sync:', userId);
     }
   },
 };
@@ -156,13 +331,20 @@ const getReportsFromLocalDatabase = async (): Promise<AdminReports> => {
   try {
     const db = await getDatabase();
     
-    // Buscar todas as solicitações do banco local
+    // Buscar todas as solicitações do banco local (sem filtro de user_id)
     const requests = await db.getAllAsync<{
+      id: string;
       status: string;
       created_at: string;
-    }>('SELECT status, created_at FROM vacation_requests ORDER BY created_at DESC', []);
-    
-    console.log('[AdminRepository] Local requests found:', requests.length);
+      updated_at: string;
+    }>('SELECT id, status, created_at, updated_at FROM vacation_requests ORDER BY created_at DESC', []);
+    if (requests.length > 0) {
+      console.log('[AdminRepository] Sample request:', {
+        id: requests[0].id,
+        status: requests[0].status,
+        created_at: requests[0].created_at
+      });
+    }
     
     // Calcular estatísticas
     const monthStart = new Date();
@@ -173,6 +355,13 @@ const getReportsFromLocalDatabase = async (): Promise<AdminReports> => {
     const approvedRequests = requests.filter(r => r.status === 'approved').length;
     const pendingRequests = requests.filter(r => r.status === 'pending').length;
     const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
+    
+    console.log('[AdminRepository] Calculated stats:', {
+      totalRequests,
+      approvedRequests,
+      pendingRequests,
+      rejectedRequests
+    });
     
     // Solicitações deste mês
     const requestsThisMonth = requests.filter(r => {
@@ -199,6 +388,10 @@ const getReportsFromLocalDatabase = async (): Promise<AdminReports> => {
     };
   } catch (error) {
     console.error('[AdminRepository] Error getting reports from local database:', error);
+    if (error instanceof Error) {
+      console.error('[AdminRepository] Error message:', error.message);
+      console.error('[AdminRepository] Error stack:', error.stack);
+    }
     return {
       totalRequests: 0,
       approvedRequests: 0,

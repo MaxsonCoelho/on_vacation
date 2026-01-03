@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppNavigator } from './navigation/AppNavigator';
 import { initOfflineDatabase } from '../core/offline';
 import { NetworkMonitor } from '../core/offline/connectivity/NetworkMonitor';
+import { SyncProvider } from '../core/offline/SyncProvider';
 
 export default function Main() {
   const [isDbReady, setIsDbReady] = React.useState(false);
@@ -25,8 +26,10 @@ export default function Main() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <AppNavigator />
+        <SyncProvider>
+          <StatusBar style="dark" />
+          <AppNavigator />
+        </SyncProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

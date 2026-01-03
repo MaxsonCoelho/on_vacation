@@ -4,8 +4,10 @@ import { TeamRequest } from '../../domain/entities/TeamRequest';
 import * as Local from '../datasources/local/ManagerLocalDataSource';
 import * as Remote from '../datasources/remote/ManagerRemoteDataSource';
 import { SyncQueue } from '../../../../core/offline/queue/SyncQueue';
+import { SyncWorker } from '../../../../core/offline/queue/SyncWorker';
 import { useAuthStore } from '../../../auth/presentation/store/useAuthStore';
 import { supabase } from '../../../../core/services/supabase';
+import NetInfo from '@react-native-community/netinfo';
 
 // Função auxiliar para atualizar os nomes dos profiles nas solicitações locais
 const updateLocalRequestNames = async (requests: TeamRequest[]): Promise<void> => {
@@ -122,12 +124,70 @@ export const ManagerRepositoryImpl: ManagerRepository = {
   },
 
   approveRequest: async (requestId: string, notes?: string): Promise<void> => {
+    // 1. Sempre atualiza local primeiro (optimistic UI)
     await Local.updateRequestStatusLocal(requestId, 'approved', notes);
-    await SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes });
+    console.log('[ManagerRepository] Local update completed for request:', requestId);
+    
+    // 2. Verifica se tem internet e sessão ativa
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (netState.isConnected && session) {
+      // 3. Se tiver internet, atualiza remoto imediatamente
+      try {
+        console.log('[ManagerRepository] Online - updating remote immediately for request:', requestId);
+        await Remote.approveRequestRemote(requestId, notes);
+        console.log('[ManagerRepository] Remote update successful for request:', requestId);
+        
+        // Dispara processamento de fila para garantir que qualquer item pendente seja processado
+        SyncWorker.processQueue().catch(err => {
+          console.warn('[ManagerRepository] Error processing queue after approval:', err);
+        });
+      } catch (error) {
+        // Se falhar no remoto, enfileira para retry
+        console.error('[ManagerRepository] Remote update failed, queuing for retry:', error);
+        await SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes });
+        console.log('[ManagerRepository] Request queued for sync:', requestId);
+      }
+    } else {
+      // 4. Se não tiver internet, apenas enfileira
+      console.log('[ManagerRepository] Offline - queuing for sync. Request:', requestId);
+      await SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes });
+      console.log('[ManagerRepository] Request queued for sync:', requestId);
+    }
   },
 
   rejectRequest: async (requestId: string, notes?: string): Promise<void> => {
+    // 1. Sempre atualiza local primeiro (optimistic UI)
     await Local.updateRequestStatusLocal(requestId, 'rejected', notes);
-    await SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes });
+    console.log('[ManagerRepository] Local update completed for request:', requestId);
+    
+    // 2. Verifica se tem internet e sessão ativa
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (netState.isConnected && session) {
+      // 3. Se tiver internet, atualiza remoto imediatamente
+      try {
+        console.log('[ManagerRepository] Online - updating remote immediately for request:', requestId);
+        await Remote.rejectRequestRemote(requestId, notes);
+        console.log('[ManagerRepository] Remote update successful for request:', requestId);
+        
+        // Dispara processamento de fila para garantir que qualquer item pendente seja processado
+        SyncWorker.processQueue().catch(err => {
+          console.warn('[ManagerRepository] Error processing queue after rejection:', err);
+        });
+      } catch (error) {
+        // Se falhar no remoto, enfileira para retry
+        console.error('[ManagerRepository] Remote update failed, queuing for retry:', error);
+        await SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes });
+        console.log('[ManagerRepository] Request queued for sync:', requestId);
+      }
+    } else {
+      // 4. Se não tiver internet, apenas enfileira
+      console.log('[ManagerRepository] Offline - queuing for sync. Request:', requestId);
+      await SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes });
+      console.log('[ManagerRepository] Request queued for sync:', requestId);
+    }
   }
 };

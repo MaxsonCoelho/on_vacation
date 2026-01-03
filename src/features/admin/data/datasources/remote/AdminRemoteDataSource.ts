@@ -9,6 +9,40 @@ const getCurrentMonthStart = () => {
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 };
 
+export const getRequestsRemoteForSync = async (): Promise<Array<{
+  id: string;
+  user_id: string;
+  title: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  collaborator_notes?: string;
+  manager_notes?: string;
+  created_at: string;
+  updated_at: string;
+}> | null> => {
+  console.log('[AdminRemoteDataSource] Fetching requests for sync...');
+  
+  // Tentar buscar todas as solicitações do remoto para sincronizar
+  try {
+    const { data: requests, error: requestsError } = await supabase
+      .from('vacation_requests')
+      .select('id, user_id, title, start_date, end_date, status, collaborator_notes, manager_notes, created_at, updated_at')
+      .order('created_at', { ascending: false });
+    
+    if (requestsError) {
+      console.warn('[AdminRemoteDataSource] Error fetching requests for sync (RLS may block):', requestsError.message);
+      return null; // Retorna null se não conseguir buscar (RLS)
+    }
+    
+    console.log('[AdminRemoteDataSource] Requests fetched for sync:', requests?.length || 0);
+    return requests || null;
+  } catch (error) {
+    console.warn('[AdminRemoteDataSource] Exception fetching requests for sync:', error);
+    return null;
+  }
+};
+
 export const getReportsRemote = async (): Promise<AdminReports> => {
   console.log('[AdminRemoteDataSource] Fetching reports...');
   

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useState } from 'react';
+import { View, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { 
@@ -8,8 +8,11 @@ import {
   Avatar, 
   Button,
   Spacer,
-  Card
+  Card,
+  Toast,
+  ToastProps
 } from '../../../../../core/design-system';
+import { useAdminStore } from '../../store/useAdminStore';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
 import { AdminUsersStackParamList } from '../../../../../app/navigation/admin/stacks/AdminUsersStack';
@@ -29,7 +32,8 @@ type RouteProp = {
 export const AdminUserDetailsScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { name, email, role, status, createdAt } = route.params || {
+  const { userId, name, email, role, status, createdAt } = route.params || {
+    userId: '',
     name: 'Ricardo Almeida',
     email: 'ricardo.almeida@email.com',
     role: 'Colaborador',
@@ -37,7 +41,16 @@ export const AdminUserDetailsScreen = () => {
     createdAt: '15 de março de 2023',
   };
   
+  const { updateUserStatus, isLoading } = useAdminStore();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [toast, setToast] = useState<ToastProps>({
+    visible: false,
+    message: '',
+    variant: 'success',
+  });
+  
   const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
+  const isActive = status === 'Ativo' || status === 'active';
 
   const handleChangeProfile = () => {
     // TODO: Implementar alteração de perfil
@@ -45,8 +58,80 @@ export const AdminUserDetailsScreen = () => {
   };
 
   const handleDeactivateUser = () => {
-    // TODO: Implementar desativação de usuário
-    console.log('Desativar usuário:', name);
+    Alert.alert(
+      'Desativar Usuário',
+      `Deseja desativar o usuário ${name}? Ele não poderá mais acessar o sistema.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Desativar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsProcessing(true);
+              await updateUserStatus(userId, 'inactive');
+              setToast({
+                visible: true,
+                message: 'Usuário desativado com sucesso!',
+                variant: 'success',
+                onDismiss: () => {
+                  setToast(prev => ({ ...prev, visible: false }));
+                  navigation.goBack();
+                }
+              });
+            } catch (error) {
+              console.error('[AdminUserDetails] Error deactivating user:', error);
+              setToast({
+                visible: true,
+                message: 'Não foi possível desativar o usuário. Tente novamente.',
+                variant: 'error',
+                onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
+              });
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleActivateUser = () => {
+    Alert.alert(
+      'Ativar Usuário',
+      `Deseja ativar o usuário ${name}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Ativar',
+          onPress: async () => {
+            try {
+              setIsProcessing(true);
+              await updateUserStatus(userId, 'active');
+              setToast({
+                visible: true,
+                message: 'Usuário ativado com sucesso!',
+                variant: 'success',
+                onDismiss: () => {
+                  setToast(prev => ({ ...prev, visible: false }));
+                  navigation.goBack();
+                }
+              });
+            } catch (error) {
+              console.error('[AdminUserDetails] Error activating user:', error);
+              setToast({
+                visible: true,
+                message: 'Não foi possível ativar o usuário. Tente novamente.',
+                variant: 'error',
+                onDismiss: () => setToast(prev => ({ ...prev, visible: false }))
+              });
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -135,15 +220,26 @@ export const AdminUserDetailsScreen = () => {
           <Spacer size="md" />
           
           <Button
-            title="Desativar usuário"
-            onPress={handleDeactivateUser}
+            title={isActive ? 'Desativar usuário' : 'Ativar usuário'}
+            onPress={isActive ? handleDeactivateUser : handleActivateUser}
             variant="outline"
-            style={styles.actionButton}
+            style={[
+              styles.actionButton,
+              !isActive && { borderColor: theme.colors.success }
+            ]}
+            disabled={isProcessing || isLoading}
           />
         </Card>
 
         <Spacer size="xl" />
       </View>
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        variant={toast.variant}
+        duration={1500}
+        onDismiss={toast.onDismiss}
+      />
     </ScreenContainer>
   );
 };

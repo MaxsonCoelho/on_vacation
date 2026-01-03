@@ -32,6 +32,8 @@ export const AdminHomeScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
+      console.log('[AdminHomeScreen] Screen focused - syncing data...');
+      // Sempre sincroniza quando focar na tela (se online)
       fetchReports();
       subscribeToRealtime();
     }, [fetchReports, subscribeToRealtime])

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, TextInput, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -60,6 +60,7 @@ export const AdminUsersScreen = () => {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('Todos');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     return () => unsubscribeFromRealtime();
@@ -67,10 +68,18 @@ export const AdminUsersScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      fetchUsers();
+      console.log('[AdminUsersScreen] Screen focused - syncing users...');
+      // Sempre busca do remoto quando focar na tela (se online) para sincronizar
+      fetchUsers(activeFilter);
       subscribeToRealtime();
-    }, [fetchUsers, subscribeToRealtime])
+    }, [fetchUsers, subscribeToRealtime, activeFilter])
   );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchUsers(activeFilter);
+    setRefreshing(false);
+  }, [fetchUsers, activeFilter]);
 
   const filteredUsers = useMemo(() => {
     let filtered = users;
@@ -143,6 +152,9 @@ export const AdminUsersScreen = () => {
             estimatedItemSize={70}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
             renderItem={({ item }) => {
               // Formatar data de criação
               const formattedDate = item.createdAt 
