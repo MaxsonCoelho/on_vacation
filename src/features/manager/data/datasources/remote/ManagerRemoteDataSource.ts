@@ -106,6 +106,7 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
   console.log('[ManagerRemoteDataSource] Data received:', data?.length);
   if (data && data.length > 0) {
       console.log('[ManagerRemoteDataSource] First item sample:', JSON.stringify(data[0], null, 2));
+      console.log('[ManagerRemoteDataSource] Profiles type check:', typeof data[0].profiles, Array.isArray(data[0].profiles));
   } else {
       // If data is empty but count was > 0, it means the join failed (RLS on profiles?)
       if (count && count > 0) {
@@ -152,19 +153,40 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
       }
   }
 
-  return (data as unknown as RemoteRequestDB[]).map(row => ({
-    id: row.id,
-    employeeId: row.user_id,
-    title: row.title,
-    employeeName: row.profiles?.name || 'Unknown',
-    employeeAvatarUrl: row.profiles?.avatar_url,
-    startDate: row.start_date,
-    endDate: row.end_date,
-    status: row.status as RequestStatus,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    notes: row.collaborator_notes
-  }));
+  // Extrair user_ids únicos para buscar profiles se necessário
+  const userIds = [...new Set((data as any[]).map(row => row.user_id))];
+  
+  // Buscar profiles separadamente para garantir que temos os dados
+  const { data: profilesData } = await supabase
+    .from('profiles')
+    .select('id, name, avatar_url')
+    .in('id', userIds);
+  
+  const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+  
+  return (data as any[]).map(row => {
+    // Tenta pegar do join primeiro, depois do map
+    let profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    
+    // Se não encontrou no join, busca no map
+    if (!profile || !profile.name) {
+      profile = profilesMap.get(row.user_id);
+    }
+    
+    return {
+      id: row.id,
+      employeeId: row.user_id,
+      title: row.title,
+      employeeName: profile?.name || 'Unknown',
+      employeeAvatarUrl: profile?.avatar_url,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      status: row.status as RequestStatus,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      notes: row.collaborator_notes
+    };
+  });
 };
 
 export const approveRequestRemote = async (requestId: string, notes?: string): Promise<void> => {

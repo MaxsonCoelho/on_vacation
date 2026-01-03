@@ -5,6 +5,60 @@ import * as Local from '../datasources/local/ManagerLocalDataSource';
 import * as Remote from '../datasources/remote/ManagerRemoteDataSource';
 import { SyncQueue } from '../../../../core/offline/queue/SyncQueue';
 import { useAuthStore } from '../../../auth/presentation/store/useAuthStore';
+import { supabase } from '../../../../core/services/supabase';
+
+// Função auxiliar para atualizar os nomes dos profiles nas solicitações locais
+const updateLocalRequestNames = async (requests: TeamRequest[]): Promise<void> => {
+  try {
+    // Buscar user_ids únicos que precisam de atualização (aqueles com "Unknown")
+    const userIdsToUpdate = [...new Set(
+      requests
+        .filter(r => !r.employeeName || r.employeeName === 'Unknown')
+        .map(r => r.employeeId)
+    )];
+
+    if (userIdsToUpdate.length === 0) return;
+
+    console.log('[ManagerRepository] Updating names for user_ids:', userIdsToUpdate);
+
+    // Buscar profiles do Supabase
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, name, avatar_url')
+      .in('id', userIdsToUpdate);
+
+    if (!profilesData || profilesData.length === 0) {
+      console.warn('[ManagerRepository] No profiles found for user_ids');
+      return;
+    }
+
+    // Criar map de profiles
+    const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+
+    // Atualizar solicitações locais com os nomes corretos
+    const requestsToUpdate = requests
+      .filter(r => !r.employeeName || r.employeeName === 'Unknown')
+      .map(r => {
+        const profile = profilesMap.get(r.employeeId);
+        if (profile) {
+          return {
+            ...r,
+            employeeName: profile.name,
+            employeeAvatarUrl: profile.avatar_url
+          };
+        }
+        return r;
+      });
+
+    // Salvar as solicitações atualizadas
+    if (requestsToUpdate.length > 0) {
+      await Local.saveRequestsLocal(requestsToUpdate);
+      console.log('[ManagerRepository] Updated', requestsToUpdate.length, 'requests with profile names');
+    }
+  } catch (error) {
+    console.warn('[ManagerRepository] Error updating local request names:', error);
+  }
+};
 
 export const ManagerRepositoryImpl: ManagerRepository = {
   getProfile: async (): Promise<Manager> => {
@@ -22,40 +76,33 @@ export const ManagerRepositoryImpl: ManagerRepository = {
     let requests = await Local.getTeamRequestsLocal();
     console.log('[ManagerRepository] Local requests count:', requests.length);
     
-    // Always fetch remote for now to ensure we have data during development/testing
-    // Or if local is empty
-    if (requests.length === 0) {
-        console.log('[ManagerRepository] Local is empty, fetching remote...');
-        try {
-            const remoteRequests = await Remote.getTeamRequestsRemote();
-            
-            // Update in-memory requests immediately so UI shows data even if save fails
-            requests = remoteRequests;
-            
+    // Sempre tenta buscar do remoto para atualizar os dados
+    try {
+        const remoteRequests = await Remote.getTeamRequestsRemote();
+        
+        if (remoteRequests.length > 0) {
+            // Se encontrou dados remotos, salva localmente
             try {
-                await Local.saveRequestsLocal(remoteRequests);
-            } catch (saveError) {
-                console.warn('[ManagerRepository] Error saving to local DB (possible schema mismatch?):', saveError);
-            }
-        } catch (e) {
-            console.warn('[ManagerRepository] Error fetching remote requests', e);
-        }
-    } else {
-        // Optional: Background sync could go here
-        // For debugging: let's try to fetch remote anyway and update local if successful
-        try {
-             // console.log('[ManagerRepository] Fetching remote to update local...');
-             const remoteRequests = await Remote.getTeamRequestsRemote();
-             
-             try {
                 await Local.saveRequestsLocal(remoteRequests);
                 // Re-fetch from local to get the merged state (remote + preserved local changes)
                 requests = await Local.getTeamRequestsLocal();
-             } catch (saveError) {
-                console.warn('[ManagerRepository] Error saving to local DB (background sync):', saveError);
-             }
-        } catch (e) {
-            console.warn('[ManagerRepository] Error background syncing remote requests', e);
+            } catch (saveError) {
+                console.warn('[ManagerRepository] Error saving to local DB:', saveError);
+                // Usa dados remotos em memória mesmo se não conseguir salvar
+                requests = remoteRequests;
+            }
+        } else if (requests.length > 0) {
+            // Se não encontrou dados remotos mas tem dados locais, atualiza os nomes dos profiles
+            // Buscar profiles para os user_ids das solicitações locais
+            await updateLocalRequestNames(requests);
+            requests = await Local.getTeamRequestsLocal();
+        }
+    } catch (e) {
+        console.warn('[ManagerRepository] Error fetching remote requests', e);
+        // Se falhou e tem dados locais, tenta atualizar os nomes dos profiles
+        if (requests.length > 0) {
+            await updateLocalRequestNames(requests);
+            requests = await Local.getTeamRequestsLocal();
         }
     }
     
