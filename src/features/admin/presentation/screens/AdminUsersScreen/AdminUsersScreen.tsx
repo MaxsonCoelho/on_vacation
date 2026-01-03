@@ -1,79 +1,27 @@
-import React, { useState, useMemo } from 'react';
-import { View, TextInput, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { View, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenContainer, Text, Avatar, FilterList, Icon } from '../../../../../core/design-system';
 import { FlashList } from '@shopify/flash-list';
+import { useAdminStore } from '../../store/useAdminStore';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
 import { AdminUsersStackParamList } from '../../../../../app/navigation/admin/stacks/AdminUsersStack';
+import { formatDate } from '../../../../../core/utils/date';
 
 type NavigationProp = NativeStackNavigationProp<AdminUsersStackParamList>;
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'Colaborador' | 'Gestor' | 'Administrador';
-  status?: 'Ativo' | 'Inativo';
-  createdAt?: string;
-}
-
-// Dados estáticos baseados no protótipo - apenas usuários ativos
-const ALL_USERS: User[] = [
-  {
-    id: '1',
-    name: 'Carlos Silva',
-    email: 'colaborador@email.com',
-    role: 'Colaborador',
-    status: 'Ativo',
-    createdAt: '15 de março de 2023',
-  },
-  {
-    id: '2',
-    name: 'Ana Souza',
-    email: 'gestor@email.com',
-    role: 'Gestor',
-    status: 'Ativo',
-    createdAt: '15 de março de 2023',
-  },
-  {
-    id: '3',
-    name: 'Pedro Almeida',
-    email: 'admin@email.com',
-    role: 'Administrador',
-    status: 'Ativo',
-    createdAt: '15 de março de 2023',
-  },
-  {
-    id: '4',
-    name: 'Mariana Costa',
-    email: 'colaborador2@email.com',
-    role: 'Colaborador',
-    status: 'Ativo',
-    createdAt: '15 de março de 2023',
-  },
-  {
-    id: '5',
-    name: 'Ricardo Pereira',
-    email: 'ricardo.almeida@email.com',
-    role: 'Colaborador',
-    status: 'Ativo',
-    createdAt: '15 de março de 2023',
-  },
-  {
-    id: '6',
-    name: 'Fernanda Lima',
-    email: 'admin2@email.com',
-    role: 'Administrador',
-    status: 'Ativo',
-    createdAt: '15 de março de 2023',
-  },
-];
-
 const FILTERS = ['Todos', 'Colaboradores', 'Gestores', 'Adm'];
 
-const UserItem = ({ item, onPress }: { item: User; onPress: () => void }) => {
+const UserItem = ({ 
+  item, 
+  onPress 
+}: { 
+  item: { id: string; name: string; email: string; role: string; avatarUrl?: string }; 
+  onPress: () => void 
+}) => {
   const initials = item.name.split(' ').map(n => n[0]).join('').substring(0, 2);
 
   return (
@@ -83,7 +31,7 @@ const UserItem = ({ item, onPress }: { item: User; onPress: () => void }) => {
       activeOpacity={0.7}
     >
       <Avatar 
-        source={undefined} 
+        source={item.avatarUrl} 
         size="md"
         initials={initials} 
       />
@@ -102,11 +50,30 @@ const UserItem = ({ item, onPress }: { item: User; onPress: () => void }) => {
 
 export const AdminUsersScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { 
+    users, 
+    isLoading, 
+    fetchUsers,
+    subscribeToRealtime,
+    unsubscribeFromRealtime
+  } = useAdminStore();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('Todos');
 
+  useEffect(() => {
+    return () => unsubscribeFromRealtime();
+  }, [unsubscribeFromRealtime]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUsers();
+      subscribeToRealtime();
+    }, [fetchUsers, subscribeToRealtime])
+  );
+
   const filteredUsers = useMemo(() => {
-    let filtered = ALL_USERS;
+    let filtered = users;
 
     // Aplicar filtro de role
     if (activeFilter !== 'Todos') {
@@ -132,7 +99,15 @@ export const AdminUsersScreen = () => {
     }
 
     return filtered;
-  }, [searchQuery, activeFilter]);
+  }, [searchQuery, activeFilter, users]);
+
+  if (isLoading && users.length === 0) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <ScreenContainer scrollable={false} style={{ flex: 1 }} edges={['left', 'right']}>
@@ -168,19 +143,26 @@ export const AdminUsersScreen = () => {
             estimatedItemSize={70}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <UserItem 
-                item={item} 
-                onPress={() => navigation.navigate('UserDetails', {
-                  userId: item.id,
-                  name: item.name,
-                  email: item.email,
-                  role: item.role,
-                  status: item.status || 'Ativo',
-                  createdAt: item.createdAt || '',
-                })}
-              />
-            )}
+            renderItem={({ item }) => {
+              // Formatar data de criação
+              const formattedDate = item.createdAt 
+                ? formatDate(item.createdAt)
+                : '';
+              
+              return (
+                <UserItem 
+                  item={item} 
+                  onPress={() => navigation.navigate('UserDetails', {
+                    userId: item.id,
+                    name: item.name,
+                    email: item.email,
+                    role: item.role,
+                    status: item.status === 'active' ? 'Ativo' : 'Inativo',
+                    createdAt: formattedDate || 'Data não disponível',
+                  })}
+                />
+              );
+            }}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>

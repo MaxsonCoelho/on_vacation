@@ -38,4 +38,43 @@ export const VACATION_REQUESTS_TABLE = `
   );
 `;
 
+export const ADMIN_REPORTS_TABLE = `
+  CREATE TABLE IF NOT EXISTS admin_reports (
+    total_requests INTEGER DEFAULT 0,
+    approved_requests INTEGER DEFAULT 0,
+    pending_requests INTEGER DEFAULT 0,
+    rejected_requests INTEGER DEFAULT 0,
+    total_collaborators INTEGER DEFAULT 0,
+    total_managers INTEGER DEFAULT 0,
+    active_collaborators INTEGER DEFAULT 0,
+    pending_registrations INTEGER DEFAULT 0,
+    new_requests_this_month INTEGER DEFAULT 0,
+    approved_requests_this_month INTEGER DEFAULT 0,
+    new_registrations_this_month INTEGER DEFAULT 0
+  );
+`;
+
+export const ADMIN_PENDING_USERS_TABLE = `
+  CREATE TABLE IF NOT EXISTS admin_pending_users (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+`;
+
+export const ADMIN_USERS_TABLE = `
+  CREATE TABLE IF NOT EXISTS admin_users (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    avatar_url TEXT
+  );
+`;
+
 export const SCHEMA_VERSION = 1;

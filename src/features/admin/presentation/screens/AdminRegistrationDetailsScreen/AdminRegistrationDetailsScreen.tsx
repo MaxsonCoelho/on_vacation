@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, ScrollView, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { 
@@ -10,9 +10,11 @@ import {
   Spacer,
   Card
 } from '../../../../../core/design-system';
+import { useAdminStore } from '../../store/useAdminStore';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
 import { AdminHomeStackParamList } from '../../../../../app/navigation/admin/stacks/AdminHomeStack';
+import { formatDate } from '../../../../../core/utils/date';
 
 type NavigationProp = NativeStackNavigationProp<AdminHomeStackParamList>;
 type RouteProp = {
@@ -28,76 +30,72 @@ type RouteProp = {
   };
 };
 
-// Dados estáticos para demonstração
-const USER_DETAILS: Record<string, any> = {
-  '1': {
-    name: 'Lucas Oliveira',
-    email: 'lucas.oliveira@email.com',
-    requestedRole: 'Colaborador',
-    registrationDate: '15/07/2024',
-    department: 'Marketing',
-    position: 'Analista de Marketing',
-    phone: '(11) 99999-8888',
-    status: 'Pendente de aprovação',
-  },
-  '2': {
-    name: 'João Silva',
-    email: 'joao.silva@email.com',
-    requestedRole: 'Colaborador',
-    registrationDate: '15/07/2024',
-    department: 'Marketing',
-    position: 'Analista de Marketing',
-    phone: '(11) 99999-8888',
-    status: 'Pendente de aprovação',
-  },
-  '3': {
-    name: 'Maria Santos',
-    email: 'maria.santos@email.com',
-    requestedRole: 'Colaborador',
-    registrationDate: '15/07/2024',
-    department: 'TI',
-    position: 'Desenvolvedora Front-end',
-    phone: '(11) 99999-8888',
-    status: 'Pendente de aprovação',
-  },
-  '4': {
-    name: 'Carlos Pereira',
-    email: 'carlos.pereira@email.com',
-    requestedRole: 'Colaborador',
-    registrationDate: '15/07/2024',
-    department: 'Projetos',
-    position: 'Gerente de Projetos',
-    phone: '(11) 99999-8888',
-    status: 'Pendente de aprovação',
-  },
-  '5': {
-    name: 'Pedro Souza',
-    email: 'pedro.souza@email.com',
-    requestedRole: 'Colaborador',
-    registrationDate: '15/07/2024',
-    department: 'TI',
-    position: 'Estagiário de TI',
-    phone: '(11) 99999-8888',
-    status: 'Pendente de aprovação',
-  },
-};
-
 export const AdminRegistrationDetailsScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { userId } = route.params || { userId: '1' };
+  const { userId, name, email, role } = route.params || { 
+    userId: '', 
+    name: '', 
+    email: '', 
+    role: '' 
+  };
   
-  const user = USER_DETAILS[userId] || USER_DETAILS['1'];
-  const initials = user.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2);
+  const { approveUser, rejectUser, isLoading } = useAdminStore();
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  const initials = name.split(' ').map((n: string) => n[0]).join('').substring(0, 2);
 
-  const handleApprove = () => {
-    // TODO: Implementar aprovação
-    console.log('Aprovar cadastro:', userId);
+  const handleApprove = async () => {
+    Alert.alert(
+      'Aprovar Cadastro',
+      `Deseja aprovar o cadastro de ${name}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Aprovar',
+          onPress: async () => {
+            try {
+              setIsProcessing(true);
+              await approveUser(userId);
+              Alert.alert('Sucesso', 'Cadastro aprovado com sucesso!', [
+                { text: 'OK', onPress: () => navigation.goBack() }
+              ]);
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível aprovar o cadastro. Tente novamente.');
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
-  const handleReject = () => {
-    // TODO: Implementar rejeição
-    console.log('Rejeitar cadastro:', userId);
+  const handleReject = async () => {
+    Alert.alert(
+      'Rejeitar Cadastro',
+      `Deseja rejeitar o cadastro de ${name}? Esta ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Rejeitar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsProcessing(true);
+              await rejectUser(userId);
+              Alert.alert('Sucesso', 'Cadastro rejeitado.', [
+                { text: 'OK', onPress: () => navigation.goBack() }
+              ]);
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível rejeitar o cadastro. Tente novamente.');
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -114,15 +112,15 @@ export const AdminRegistrationDetailsScreen = () => {
           </View>
           <Spacer size="md" />
           <Text variant="h1" weight="bold" style={styles.name}>
-            {user.name}
+            {name}
           </Text>
           <Spacer size="xs" />
           <Text variant="body" color="text.secondary" style={styles.email}>
-            {user.email}
+            {email}
           </Text>
           <Spacer size="sm" />
           <Text variant="body" color="text.secondary" style={styles.registrationInfo}>
-            Perfil solicitado: {user.requestedRole} • Data de cadastro: {user.registrationDate}
+            Perfil solicitado: {role} • Data de cadastro: {route.params?.registrationDate || 'Data não disponível'}
           </Text>
         </Card>
 
@@ -135,32 +133,38 @@ export const AdminRegistrationDetailsScreen = () => {
           </Text>
           <View style={styles.separator} />
           
-          <View style={styles.infoRow}>
-            <Text variant="body" color="text.secondary" style={styles.infoLabel}>
-              Departamento
-            </Text>
-            <Text variant="body" weight="bold">
-              {user.department}
-            </Text>
-          </View>
+            {route.params?.department && (
+              <View style={styles.infoRow}>
+                <Text variant="body" color="text.secondary" style={styles.infoLabel}>
+                  Departamento
+                </Text>
+                <Text variant="body" weight="bold">
+                  {route.params.department}
+                </Text>
+              </View>
+            )}
 
-          <View style={styles.infoRow}>
-            <Text variant="body" color="text.secondary" style={styles.infoLabel}>
-              Cargo
-            </Text>
-            <Text variant="body" weight="bold">
-              {user.position}
-            </Text>
-          </View>
+            {route.params?.position && (
+              <View style={styles.infoRow}>
+                <Text variant="body" color="text.secondary" style={styles.infoLabel}>
+                  Cargo
+                </Text>
+                <Text variant="body" weight="bold">
+                  {route.params.position}
+                </Text>
+              </View>
+            )}
 
-          <View style={styles.infoRow}>
-            <Text variant="body" color="text.secondary" style={styles.infoLabel}>
-              Telefone
-            </Text>
-            <Text variant="body" weight="bold">
-              {user.phone}
-            </Text>
-          </View>
+            {route.params?.phone && (
+              <View style={styles.infoRow}>
+                <Text variant="body" color="text.secondary" style={styles.infoLabel}>
+                  Telefone
+                </Text>
+                <Text variant="body" weight="bold">
+                  {route.params.phone}
+                </Text>
+              </View>
+            )}
         </Card>
 
         <Spacer size="lg" />
@@ -171,29 +175,31 @@ export const AdminRegistrationDetailsScreen = () => {
             Status do cadastro
           </Text>
           <View style={styles.separator} />
-          <Text variant="body" style={styles.statusText}>
-            {user.status}
-          </Text>
+            <Text variant="body" style={styles.statusText}>
+              Pendente de aprovação
+            </Text>
         </Card>
 
         <Spacer size="xl" />
 
-        {/* Botões de ação */}
-        <View style={styles.actionsContainer}>
-          <Button
-            title="Rejeitar"
-            onPress={handleReject}
-            variant="outline"
-            style={styles.rejectButton}
-          />
-          <Spacer size="md" horizontal />
-          <Button
-            title="Aprovar cadastro"
-            onPress={handleApprove}
-            variant="primary"
-            style={styles.approveButton}
-          />
-        </View>
+          {/* Botões de ação */}
+          <View style={styles.actionsContainer}>
+            <Button
+              title="Rejeitar"
+              onPress={handleReject}
+              variant="outline"
+              style={styles.rejectButton}
+              disabled={isProcessing || isLoading}
+            />
+            <Spacer size="md" horizontal />
+            <Button
+              title="Aprovar cadastro"
+              onPress={handleApprove}
+              variant="primary"
+              style={styles.approveButton}
+              disabled={isProcessing || isLoading}
+            />
+          </View>
 
         <Spacer size="lg" />
       </View>

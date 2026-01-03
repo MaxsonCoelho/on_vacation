@@ -1,56 +1,25 @@
-import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenContainer, Text, Avatar } from '../../../../../core/design-system';
 import { FlashList } from '@shopify/flash-list';
+import { useAdminStore } from '../../store/useAdminStore';
 import { styles } from './styles';
+import { theme } from '../../../../../core/design-system/tokens';
 import { AdminHomeStackParamList } from '../../../../../app/navigation/admin/stacks/AdminHomeStack';
+import { formatDate } from '../../../../../core/utils/date';
 
 type NavigationProp = NativeStackNavigationProp<AdminHomeStackParamList>;
 
-interface PendingUser {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-}
-
-// Dados estáticos baseados no protótipo
-const PENDING_USERS: PendingUser[] = [
-  {
-    id: '1',
-    name: 'João Silva',
-    role: 'Analista de Marketing',
-    email: 'joao.silva@email.com',
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    role: 'Desenvolvedora Front-end',
-    email: 'maria.santos@email.com',
-  },
-  {
-    id: '3',
-    name: 'Carlos Pereira',
-    role: 'Gerente de Projetos',
-    email: 'carlos.pereira@email.com',
-  },
-  {
-    id: '4',
-    name: 'Ana Oliveira',
-    role: 'Analista de RH',
-    email: 'ana.oliveira@email.com',
-  },
-  {
-    id: '5',
-    name: 'Pedro Souza',
-    role: 'Estagiário de TI',
-    email: 'pedro.souza@email.com',
-  },
-];
-
-const PendingUserItem = ({ item, onPress }: { item: PendingUser; onPress: () => void }) => {
+const PendingUserItem = ({ 
+  item, 
+  onPress 
+}: { 
+  item: { id: string; name: string; role: string; email: string }; 
+  onPress: () => void 
+}) => {
   const initials = item.name.split(' ').map(n => n[0]).join('').substring(0, 2);
 
   return (
@@ -82,12 +51,39 @@ const PendingUserItem = ({ item, onPress }: { item: PendingUser; onPress: () => 
 
 export const AdminPendingRegistrationsScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { 
+    pendingUsers, 
+    isLoading, 
+    fetchPendingUsers,
+    subscribeToRealtime,
+    unsubscribeFromRealtime
+  } = useAdminStore();
+
+  useEffect(() => {
+    return () => unsubscribeFromRealtime();
+  }, [unsubscribeFromRealtime]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchPendingUsers();
+      subscribeToRealtime();
+    }, [fetchPendingUsers, subscribeToRealtime])
+  );
+
+  if (isLoading && pendingUsers.length === 0) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <ScreenContainer scrollable={false} style={{ flex: 1 }} edges={['left', 'right']}>
       <View style={styles.container}>
         <View style={styles.listContainer}>
           <FlashList
-            data={PENDING_USERS}
+            data={pendingUsers}
             estimatedItemSize={90}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
@@ -99,6 +95,7 @@ export const AdminPendingRegistrationsScreen = () => {
                   name: item.name,
                   email: item.email,
                   role: item.role,
+                  registrationDate: formatDate(item.createdAt),
                 })}
               />
             )}

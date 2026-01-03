@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, Image, TouchableOpacity } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import { View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { 
   ScreenContainer, 
@@ -8,6 +9,7 @@ import {
   Card, 
   Spacer 
 } from '../../../../../core/design-system';
+import { useAdminStore } from '../../store/useAdminStore';
 import { styles } from './styles';
 import { theme } from '../../../../../core/design-system/tokens';
 import { AdminHomeStackParamList } from '../../../../../app/navigation/admin/stacks/AdminHomeStack';
@@ -16,6 +18,47 @@ type NavigationProp = NativeStackNavigationProp<AdminHomeStackParamList>;
 
 export const AdminHomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { 
+    reports, 
+    isLoading, 
+    fetchReports,
+    subscribeToRealtime,
+    unsubscribeFromRealtime
+  } = useAdminStore();
+
+  useEffect(() => {
+    return () => unsubscribeFromRealtime();
+  }, [unsubscribeFromRealtime]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchReports();
+      subscribeToRealtime();
+    }, [fetchReports, subscribeToRealtime])
+  );
+
+  if (isLoading && !reports) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  const displayReports = reports || {
+    totalRequests: 0,
+    approvedRequests: 0,
+    pendingRequests: 0,
+    rejectedRequests: 0,
+    totalCollaborators: 0,
+    totalManagers: 0,
+    activeCollaborators: 0,
+    pendingRegistrations: 0,
+    newRequestsThisMonth: 0,
+    approvedRequestsThisMonth: 0,
+    newRegistrationsThisMonth: 0,
+  };
+
   return (
     <ScreenContainer scrollable edges={['left', 'right']}>
       <View style={styles.container}>
@@ -26,7 +69,7 @@ export const AdminHomeScreen = () => {
               Cadastros pendentes
             </Text>
             <Text variant="h1" weight="bold" style={styles.metricValue}>
-              3
+              {displayReports.pendingRegistrations}
             </Text>
           </Card>
           
@@ -35,7 +78,7 @@ export const AdminHomeScreen = () => {
               Total de colaboradores ativos
             </Text>
             <Text variant="h1" weight="bold" style={styles.metricValue}>
-              125
+              {displayReports.activeCollaborators}
             </Text>
           </Card>
         </View>
@@ -45,7 +88,7 @@ export const AdminHomeScreen = () => {
             Total de gestores
           </Text>
           <Text variant="h1" weight="bold" style={styles.metricValue}>
-            15
+            {displayReports.totalManagers}
           </Text>
         </Card>
 

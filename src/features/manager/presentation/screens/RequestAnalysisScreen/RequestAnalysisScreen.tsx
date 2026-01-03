@@ -114,6 +114,16 @@ export const RequestAnalysisScreen: React.FC<Props> = ({ navigation, route }) =>
           </View>
         </View>
 
+        {/* Título */}
+        <Text variant="h3" weight="bold" style={styles.sectionTitle}>
+          Título
+        </Text>
+        <View style={styles.titleContainer}>
+          <Text variant="body">
+            {request.title}
+          </Text>
+        </View>
+
         {/* Período */}
         <Text variant="h3" weight="bold" style={styles.sectionTitle}>
           Período

@@ -1,6 +1,7 @@
 import { QueueRepository } from './QueueRepository';
 import { approveRequestRemote, rejectRequestRemote } from '../../../features/manager/data/datasources/remote/ManagerRemoteDataSource';
 import { createRequestRemote } from '../../../features/collaborator/data/datasources/remote/VacationRemoteDatasource';
+import { approveUserRemote, rejectUserRemote, updateUserStatusRemote } from '../../../features/admin/data/datasources/remote/AdminRemoteDataSource';
 import { VacationRequest } from '../../../features/collaborator/domain/entities/VacationRequest';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../../services/supabase';
@@ -47,6 +48,24 @@ export const SyncWorker = {
             // Payload is the VacationRequest object
             await createRequestRemote(item.payload as Partial<VacationRequest>);
             break;
+            
+          case 'APPROVE_USER': {
+            const payload = item.payload as { userId: string };
+            await approveUserRemote(payload.userId);
+            break;
+          }
+            
+          case 'REJECT_USER': {
+            const payload = item.payload as { userId: string };
+            await rejectUserRemote(payload.userId);
+            break;
+          }
+            
+          case 'UPDATE_USER_STATUS': {
+            const payload = item.payload as { userId: string; status: 'active' | 'inactive' };
+            await updateUserStatusRemote(payload.userId, payload.status);
+            break;
+          }
             
           default:
             console.warn(`[SyncWorker] Unknown item type: ${item.type}`);

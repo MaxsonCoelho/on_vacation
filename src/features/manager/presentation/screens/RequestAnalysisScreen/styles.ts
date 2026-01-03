@@ -17,6 +17,9 @@ export const styles = StyleSheet.create({
   requesterRole: {
     color: theme.colors.brand.manager,
   },
+  titleContainer: {
+    marginBottom: theme.spacing.xl,
+  },
   periodContainer: {
     marginBottom: theme.spacing.xl,
   },
