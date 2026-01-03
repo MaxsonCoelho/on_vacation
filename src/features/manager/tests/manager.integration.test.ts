@@ -6,6 +6,9 @@ import { generateUUID } from '../../../core/utils';
 
 describe('Manager Feature Integration Tests', () => {
   let managerId: string;
+  
+  // Track changes made by tests for cleanup
+  const testRequests: Array<{ requestId: string; originalStatus?: string }> = [];
 
   beforeAll(async () => {
     managerId = await setupAuthForTest();
@@ -26,9 +29,62 @@ describe('Manager Feature Integration Tests', () => {
   beforeEach(async () => {
     // Reset local DB before each test to ensure clean state
     await _test_resetDB();
+    // Clear test requests tracking
+    testRequests.length = 0;
+  });
+
+  afterEach(async () => {
+    // Cleanup: Restore original state for requests modified by tests
+    for (const testReq of testRequests) {
+      try {
+        // Check if request still exists
+        const { data: existingRequest } = await supabase
+          .from('vacation_requests')
+          .select('id, status')
+          .eq('id', testReq.requestId)
+          .single();
+        
+        if (existingRequest) {
+          // If we have original status, restore it; otherwise delete the test request
+          if (testReq.originalStatus !== undefined) {
+            await supabase
+              .from('vacation_requests')
+              .update({ 
+                status: testReq.originalStatus,
+                manager_notes: null,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', testReq.requestId);
+          } else {
+            // Delete test request if it was created by the test
+            await supabase
+              .from('vacation_requests')
+              .delete()
+              .eq('id', testReq.requestId);
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to cleanup test request ${testReq.requestId}:`, error);
+      }
+    }
+    
+    // Reset local DB after each test
+    await _test_resetDB();
   });
 
   afterAll(async () => {
+    // Final cleanup: Delete any remaining test requests
+    for (const testReq of testRequests) {
+      try {
+        await supabase
+          .from('vacation_requests')
+          .delete()
+          .eq('id', testReq.requestId);
+      } catch (error) {
+        console.warn(`Failed to cleanup test request ${testReq.requestId}:`, error);
+      }
+    }
+    
     await teardownAuthForTest();
   });
 
@@ -59,7 +115,10 @@ describe('Manager Feature Integration Tests', () => {
   it('should fetch requests from remote', async () => {
     // 1. Setup: Create a request on remote
     const title = `Manager Fetch Test ${Date.now()}`;
-    await createRemoteRequest(title);
+    const requestId = await createRemoteRequest(title);
+    
+    // Track for cleanup
+    testRequests.push({ requestId });
 
     // 2. Action: Get requests via ManagerRepository
     const requests = await ManagerRepositoryImpl.getTeamRequests('Todas');
@@ -74,6 +133,18 @@ describe('Manager Feature Integration Tests', () => {
     // 1. Setup: Create and fetch a request
     const title = `Manager Approve Test ${Date.now()}`;
     const requestId = await createRemoteRequest(title);
+    
+    // Save original status for cleanup
+    const { data: originalRequest } = await supabase
+      .from('vacation_requests')
+      .select('status')
+      .eq('id', requestId)
+      .single();
+    
+    testRequests.push({ 
+      requestId, 
+      originalStatus: originalRequest?.status || 'pending' 
+    });
     
     // Initial fetch to populate local DB
     await ManagerRepositoryImpl.getTeamRequests();
@@ -96,6 +167,18 @@ describe('Manager Feature Integration Tests', () => {
     // 1. Setup: Create and fetch a request
     const title = `Manager Reject Test ${Date.now()}`;
     const requestId = await createRemoteRequest(title);
+    
+    // Save original status for cleanup
+    const { data: originalRequest } = await supabase
+      .from('vacation_requests')
+      .select('status')
+      .eq('id', requestId)
+      .single();
+    
+    testRequests.push({ 
+      requestId, 
+      originalStatus: originalRequest?.status || 'pending' 
+    });
     
     // Initial fetch to populate local DB
     await ManagerRepositoryImpl.getTeamRequests();

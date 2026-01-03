@@ -4,9 +4,13 @@ import { createRequestRemote } from '../data/datasources/remote/VacationRemoteDa
 import { VacationRequest } from '../domain/entities/VacationRequest';
 import { generateUUID } from '../../../core/utils';
 import { setupAuthForTest, teardownAuthForTest } from '../../auth/tests/utils';
+import { supabase } from '../../../core/services/supabase';
 
 describe('Collaborator Feature Integration Tests (Real)', () => {
   let userId: string;
+  
+  // Track changes made by tests for cleanup
+  const testRequests: Array<{ requestId: string }> = [];
 
   beforeAll(async () => {
     userId = await setupAuthForTest();
@@ -15,9 +19,40 @@ describe('Collaborator Feature Integration Tests (Real)', () => {
   beforeEach(async () => {
     // Reset local DB before each test to ensure clean state
     await _test_resetDB();
+    // Clear test requests tracking
+    testRequests.length = 0;
+  });
+
+  afterEach(async () => {
+    // Cleanup: Delete test requests created by tests
+    for (const testReq of testRequests) {
+      try {
+        await supabase
+          .from('vacation_requests')
+          .delete()
+          .eq('id', testReq.requestId);
+      } catch (error) {
+        console.warn(`Failed to cleanup test request ${testReq.requestId}:`, error);
+      }
+    }
+    
+    // Reset local DB after each test
+    await _test_resetDB();
   });
 
   afterAll(async () => {
+    // Final cleanup: Delete any remaining test requests
+    for (const testReq of testRequests) {
+      try {
+        await supabase
+          .from('vacation_requests')
+          .delete()
+          .eq('id', testReq.requestId);
+      } catch (error) {
+        console.warn(`Failed to cleanup test request ${testReq.requestId}:`, error);
+      }
+    }
+    
     await teardownAuthForTest();
   });
 
@@ -32,6 +67,11 @@ describe('Collaborator Feature Integration Tests (Real)', () => {
       collaboratorNotes: 'Created via integration test remote',
       status: 'pending'
     };
+
+    // Track for cleanup
+    if (remoteRequest.id) {
+      testRequests.push({ requestId: remoteRequest.id });
+    }
 
     try {
       await createRequestRemote(remoteRequest);
@@ -72,5 +112,19 @@ describe('Collaborator Feature Integration Tests (Real)', () => {
     expect(found).toBeDefined();
     expect(found?.collaboratorNotes).toBe(localRequest.collaboratorNotes);
     expect(found?.status).toBe('pending'); // Default status
+    
+    // Track for cleanup (if it was created remotely)
+    if (found?.id) {
+      // Check if it exists remotely (was synced)
+      const { data: remoteCheck } = await supabase
+        .from('vacation_requests')
+        .select('id')
+        .eq('id', found.id)
+        .single();
+      
+      if (remoteCheck) {
+        testRequests.push({ requestId: found.id });
+      }
+    }
   });
 });
