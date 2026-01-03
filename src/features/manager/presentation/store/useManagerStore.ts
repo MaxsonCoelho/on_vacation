@@ -13,21 +13,30 @@ interface ManagerState {
   profile: Manager | null;
   requests: TeamRequest[];
   isLoading: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
+  currentFilter: string | undefined;
   error: string | null;
   subscription: RealtimeChannel | null;
   
   fetchProfile: () => Promise<void>;
-  fetchRequests: (filter?: string, showLoading?: boolean) => Promise<void>;
+  fetchRequests: (filter?: string, reset?: boolean) => Promise<void>;
+  loadMoreRequests: () => Promise<void>;
   approveRequest: (requestId: string, notes?: string) => Promise<void>;
   rejectRequest: (requestId: string, notes?: string) => Promise<void>;
   subscribeToRealtime: () => void;
   unsubscribeFromRealtime: () => void;
 }
 
+const PAGE_SIZE = 10;
+
 export const useManagerStore = create<ManagerState>((set, get) => ({
   profile: null,
   requests: [],
   isLoading: false,
+  isLoadingMore: false,
+  hasMore: true,
+  currentFilter: undefined,
   error: null,
   subscription: null,
 
@@ -43,20 +52,52 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
     }
   },
 
-  fetchRequests: async (filter?: string, showLoading = true) => {
-    // Only set loading if showLoading is true
-    // This allows realtime updates to skip loading state to avoid flickering
-    if (showLoading) {
-        set({ isLoading: true, error: null });
+  fetchRequests: async (filter?: string, reset: boolean = true) => {
+    const { currentFilter } = get();
+    
+    // Se o filtro mudou ou é reset, limpa e recarrega
+    if (reset || filter !== currentFilter) {
+      set({ isLoading: true, error: null, requests: [], hasMore: true, currentFilter: filter });
+    } else {
+      set({ isLoading: true, error: null });
     }
     
     try {
       const getRequests = getTeamRequestsUseCase(ManagerRepositoryImpl);
-      const requests = await getRequests(filter);
-      set({ requests, isLoading: false });
+      const result = await getRequests(filter, PAGE_SIZE, 0);
+      set({ 
+        requests: result.data, 
+        hasMore: result.hasMore,
+        isLoading: false 
+      });
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         set({ error: errorMessage, isLoading: false });
+    }
+  },
+
+  loadMoreRequests: async () => {
+    const { requests, isLoadingMore, hasMore, currentFilter } = get();
+    
+    if (isLoadingMore || !hasMore) {
+      return;
+    }
+    
+    set({ isLoadingMore: true, error: null });
+    
+    try {
+      const getRequests = getTeamRequestsUseCase(ManagerRepositoryImpl);
+      const offset = requests.length;
+      const result = await getRequests(currentFilter, PAGE_SIZE, offset);
+      
+      set({ 
+        requests: [...requests, ...result.data],
+        hasMore: result.hasMore,
+        isLoadingMore: false 
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      set({ error: errorMessage, isLoadingMore: false });
     }
   },
 
@@ -70,7 +111,8 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
             'postgres_changes', 
             { event: '*', schema: 'public', table: 'vacation_requests' }, 
             () => {
-                fetchRequests(undefined, false); // Refresh list without loading state
+                const { currentFilter } = get();
+                fetchRequests(currentFilter, false); // Refresh list without loading state
             }
         )
         .subscribe();
@@ -87,40 +129,58 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
   },
 
   approveRequest: async (requestId: string, notes?: string) => {
-    set({ isLoading: true, error: null });
+    // Atualização otimista imediata para UI responsiva (especialmente offline)
+    const currentRequests = get().requests;
+    const updatedRequests = currentRequests.map(r => 
+      r.id === requestId ? { ...r, status: 'approved' as const, managerNotes: notes } : r
+    );
+    set({ requests: updatedRequests, isLoading: false, error: null });
+    
+    // Executa aprovação em background (não bloqueia UI)
     try {
       const approve = approveRequestUseCase(ManagerRepositoryImpl);
       await approve(requestId, notes);
       
-      const currentRequests = get().requests;
-      const updatedRequests = currentRequests.map(r => 
-        r.id === requestId ? { ...r, status: 'approved' as const } : r
-      );
-      
-      set({ requests: updatedRequests, isLoading: false });
+      // Se houver diferenças após sincronização, atualiza novamente
+      // (raramente necessário, mas garante consistência)
+      const finalRequests = get().requests;
+      if (finalRequests.find(r => r.id === requestId)?.status !== 'approved') {
+        set({ requests: updatedRequests });
+      }
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        set({ error: errorMessage, isLoading: false });
-        throw error;
+      // Se falhar, reverte para estado anterior
+      set({ requests: currentRequests });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      set({ error: errorMessage });
+      throw error;
     }
   },
 
   rejectRequest: async (requestId: string, notes?: string) => {
-    set({ isLoading: true, error: null });
+    // Atualização otimista imediata para UI responsiva (especialmente offline)
+    const currentRequests = get().requests;
+    const updatedRequests = currentRequests.map(r => 
+      r.id === requestId ? { ...r, status: 'rejected' as const, managerNotes: notes } : r
+    );
+    set({ requests: updatedRequests, isLoading: false, error: null });
+    
+    // Executa rejeição em background (não bloqueia UI)
     try {
       const reject = rejectRequestUseCase(ManagerRepositoryImpl);
       await reject(requestId, notes);
       
-      const currentRequests = get().requests;
-      const updatedRequests = currentRequests.map(r => 
-        r.id === requestId ? { ...r, status: 'rejected' as const } : r
-      );
-      
-      set({ requests: updatedRequests, isLoading: false });
+      // Se houver diferenças após sincronização, atualiza novamente
+      // (raramente necessário, mas garante consistência)
+      const finalRequests = get().requests;
+      if (finalRequests.find(r => r.id === requestId)?.status !== 'rejected') {
+        set({ requests: updatedRequests });
+      }
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        set({ error: errorMessage, isLoading: false });
-        throw error;
+      // Se falhar, reverte para estado anterior
+      set({ requests: currentRequests });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      set({ error: errorMessage });
+      throw error;
     }
   }
 }));

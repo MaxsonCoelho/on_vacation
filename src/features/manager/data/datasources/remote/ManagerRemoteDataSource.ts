@@ -41,7 +41,11 @@ interface RemoteRequestDB {
   } | null;
 }
 
-export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
+export const getTeamRequestsRemote = async (
+  limit?: number, 
+  offset?: number, 
+  filter?: string
+): Promise<{ data: TeamRequest[]; total?: number }> => {
   // Debug: Check user session first
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -80,10 +84,29 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
     .from('vacation_requests')
     .select('*', { count: 'exact', head: true });
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('vacation_requests')
-    .select('*, profiles(name, avatar_url)')
+    .select('*, profiles(name, avatar_url)', { count: 'exact' })
     .order('created_at', { ascending: false });
+
+  // Apply pagination
+  if (limit) {
+    query = query.limit(limit);
+  }
+  if (offset) {
+    query = query.range(offset, offset + (limit || 10) - 1);
+  }
+
+  // Apply filter if provided
+  if (filter && filter !== 'Todas') {
+    const normalizedFilter = filter === 'Pendentes' ? 'pending' 
+                           : filter === 'Aprovadas' ? 'approved'
+                           : filter === 'Reprovadas' ? 'rejected'
+                           : filter.toLowerCase();
+    query = query.eq('status', normalizedFilter);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('[ManagerRemoteDataSource] Error:', error);
@@ -94,10 +117,29 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
       // If data is empty but count was > 0, it means the join failed (RLS on profiles?)
       if (count && count > 0) {
           // Fallback: Fetch without profiles join
-          const { data: fallbackData } = await supabase
+          let fallbackQuery = supabase
             .from('vacation_requests')
-            .select('*')
+            .select('*', { count: 'exact' })
             .order('created_at', { ascending: false });
+          
+          // Apply pagination
+          if (limit) {
+            fallbackQuery = fallbackQuery.limit(limit);
+          }
+          if (offset) {
+            fallbackQuery = fallbackQuery.range(offset, offset + (limit || 10) - 1);
+          }
+          
+          // Apply filter if provided
+          if (filter && filter !== 'Todas') {
+            const normalizedFilter = filter === 'Pendentes' ? 'pending' 
+                                   : filter === 'Aprovadas' ? 'approved'
+                                   : filter === 'Reprovadas' ? 'rejected'
+                                   : filter.toLowerCase();
+            fallbackQuery = fallbackQuery.eq('status', normalizedFilter);
+          }
+          
+          const { data: fallbackData } = await fallbackQuery;
             
            if (fallbackData && fallbackData.length > 0) {
                // Manually fetch profiles
@@ -110,7 +152,7 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
                  
                const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
                
-               return (fallbackData as unknown as RemoteRequestDB[]).map(row => {
+               const mappedData = (fallbackData as unknown as RemoteRequestDB[]).map(row => {
                    const profile = profilesMap.get(row.user_id);
                    return {
                     id: row.id,
@@ -126,6 +168,7 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
                     notes: row.collaborator_notes
                    };
                });
+               return { data: mappedData, total: count || undefined };
            }
       }
   }
@@ -141,7 +184,7 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
   
   const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
   
-  return (data as any[]).map(row => {
+  const mappedData = (data as any[]).map(row => {
     // Tenta pegar do join primeiro, depois do map
     let profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
     
@@ -164,6 +207,8 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
       notes: row.collaborator_notes
     };
   });
+  
+  return { data: mappedData, total: count || undefined };
 };
 
 export const approveRequestRemote = async (requestId: string, notes?: string): Promise<void> => {

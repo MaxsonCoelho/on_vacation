@@ -69,76 +69,104 @@ export const ManagerRepositoryImpl: ManagerRepository = {
     return await Remote.getProfileRemote(userId);
   },
 
-  getTeamRequests: async (filter?: string): Promise<TeamRequest[]> => {
-    let requests = await Local.getTeamRequestsLocal();
+  getTeamRequests: async (
+    filter?: string, 
+    limit: number = 10, 
+    offset: number = 0
+  ): Promise<{ data: TeamRequest[]; hasMore: boolean; total?: number }> => {
+    // Buscar do local primeiro (pode ter dados em cache)
+    const localResult = await Local.getTeamRequestsLocal(limit, offset, filter);
+    let requests = localResult.data;
+    let hasMore = localResult.total ? offset + limit < localResult.total : false;
+    let total = localResult.total;
     
-    // Sempre tenta buscar do remoto para atualizar os dados
-    try {
-        const remoteRequests = await Remote.getTeamRequestsRemote();
+    // Sempre tenta buscar do remoto para atualizar os dados (apenas primeira página para cache)
+    if (offset === 0) {
+      try {
+        const remoteResult = await Remote.getTeamRequestsRemote(limit, offset, filter);
         
-        if (remoteRequests.length > 0) {
-            // Se encontrou dados remotos, salva localmente
-            try {
-                await Local.saveRequestsLocal(remoteRequests);
-                // Re-fetch from local to get the merged state (remote + preserved local changes)
-                requests = await Local.getTeamRequestsLocal();
-            } catch (saveError) {
-                // Usa dados remotos em memória mesmo se não conseguir salvar
-                requests = remoteRequests;
-            }
+        if (remoteResult.data.length > 0) {
+          // Se encontrou dados remotos, salva localmente (cache completo)
+          try {
+            await Local.saveRequestsLocal(remoteResult.data);
+            // Re-fetch from local to get the merged state (remote + preserved local changes)
+            const refreshedLocal = await Local.getTeamRequestsLocal(limit, offset, filter);
+            requests = refreshedLocal.data;
+            total = remoteResult.total || refreshedLocal.total;
+            hasMore = total ? offset + limit < total : false;
+          } catch (saveError) {
+            // Usa dados remotos em memória mesmo se não conseguir salvar
+            requests = remoteResult.data;
+            total = remoteResult.total;
+            hasMore = total ? offset + limit < total : false;
+          }
         } else if (requests.length > 0) {
-            // Se não encontrou dados remotos mas tem dados locais, atualiza os nomes dos profiles
-            // Buscar profiles para os user_ids das solicitações locais
-            await updateLocalRequestNames(requests);
-            requests = await Local.getTeamRequestsLocal();
+          // Se não encontrou dados remotos mas tem dados locais, atualiza os nomes dos profiles
+          await updateLocalRequestNames(requests);
+          const refreshedLocal = await Local.getTeamRequestsLocal(limit, offset, filter);
+          requests = refreshedLocal.data;
         }
-    } catch (e) {
+      } catch (e) {
         // Se falhou e tem dados locais, tenta atualizar os nomes dos profiles
         if (requests.length > 0) {
-            await updateLocalRequestNames(requests);
-            requests = await Local.getTeamRequestsLocal();
+          await updateLocalRequestNames(requests);
+          const refreshedLocal = await Local.getTeamRequestsLocal(limit, offset, filter);
+          requests = refreshedLocal.data;
+          hasMore = refreshedLocal.total ? offset + limit < refreshedLocal.total : false;
+          total = refreshedLocal.total;
         }
+      }
     }
     
     // Ensure sorting by date descending (newest first)
     requests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     
-    if (filter && filter !== 'Todas') {
-        const normalizedFilter = filter === 'Pendentes' ? 'pending' 
-                               : filter === 'Aprovadas' ? 'approved'
-                               : filter === 'Reprovadas' ? 'rejected'
-                               : filter.toLowerCase();
-                               
-        return requests.filter(r => r.status === normalizedFilter);
+    // Se não temos total e temos dados, calcula hasMore baseado no tamanho retornado
+    if (total === undefined) {
+      // Se retornou exatamente o limit, provavelmente há mais
+      hasMore = requests.length === limit;
     }
     
-    return requests;
+    return { data: requests, hasMore, total };
   },
 
   approveRequest: async (requestId: string, notes?: string): Promise<void> => {
     // 1. Sempre atualiza local primeiro (optimistic UI)
     await Local.updateRequestStatusLocal(requestId, 'approved', notes);
     
-    // 2. Verifica se tem internet e sessão ativa
-    const netState = await NetInfo.fetch();
-    const { data: { session } } = await supabase.auth.getSession();
+    // 2. Verifica se tem internet e sessão ativa (com timeout para não bloquear offline)
+    const networkCheck = Promise.race([
+      NetInfo.fetch(),
+      new Promise(resolve => setTimeout(() => resolve({ isConnected: false }), 500)) // 500ms timeout
+    ]) as Promise<{ isConnected: boolean }>;
     
-    if (netState.isConnected && session) {
-      // 3. Se tiver internet, atualiza remoto imediatamente
-      try {
-        await Remote.approveRequestRemote(requestId, notes);
-        
-        // Dispara processamento de fila para garantir que qualquer item pendente seja processado
-        SyncWorker.processQueue().catch(() => {
-          // Silent fail - will retry later
+    const sessionCheck = Promise.race([
+      supabase.auth.getSession().then(({ data }) => data.session),
+      new Promise(resolve => setTimeout(() => resolve(null), 500)) // 500ms timeout
+    ]) as Promise<any>;
+    
+    const [netState, session] = await Promise.all([networkCheck, sessionCheck]);
+    
+    if (netState?.isConnected && session) {
+      // 3. Se tiver internet, atualiza remoto imediatamente (em background, não bloqueia)
+      Remote.approveRequestRemote(requestId, notes)
+        .then(() => {
+          // Dispara processamento de fila para garantir que qualquer item pendente seja processado
+          SyncWorker.processQueue().catch(() => {
+            // Silent fail - will retry later
+          });
+        })
+        .catch(() => {
+          // Se falhar no remoto, enfileira para retry (em background)
+          SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes }).catch(() => {
+            // Silent fail
+          });
         });
-      } catch (error) {
-        // Se falhar no remoto, enfileira para retry
-        await SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes });
-      }
     } else {
-      // 4. Se não tiver internet, apenas enfileira
-      await SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes });
+      // 4. Se não tiver internet, apenas enfileira (em background)
+      SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes }).catch(() => {
+        // Silent fail
+      });
     }
   },
 
@@ -146,26 +174,39 @@ export const ManagerRepositoryImpl: ManagerRepository = {
     // 1. Sempre atualiza local primeiro (optimistic UI)
     await Local.updateRequestStatusLocal(requestId, 'rejected', notes);
     
-    // 2. Verifica se tem internet e sessão ativa
-    const netState = await NetInfo.fetch();
-    const { data: { session } } = await supabase.auth.getSession();
+    // 2. Verifica se tem internet e sessão ativa (com timeout para não bloquear offline)
+    const networkCheck = Promise.race([
+      NetInfo.fetch(),
+      new Promise(resolve => setTimeout(() => resolve({ isConnected: false }), 500)) // 500ms timeout
+    ]) as Promise<{ isConnected: boolean }>;
     
-    if (netState.isConnected && session) {
-      // 3. Se tiver internet, atualiza remoto imediatamente
-      try {
-        await Remote.rejectRequestRemote(requestId, notes);
-        
-        // Dispara processamento de fila para garantir que qualquer item pendente seja processado
-        SyncWorker.processQueue().catch(() => {
-          // Silent fail - will retry later
+    const sessionCheck = Promise.race([
+      supabase.auth.getSession().then(({ data }) => data.session),
+      new Promise(resolve => setTimeout(() => resolve(null), 500)) // 500ms timeout
+    ]) as Promise<any>;
+    
+    const [netState, session] = await Promise.all([networkCheck, sessionCheck]);
+    
+    if (netState?.isConnected && session) {
+      // 3. Se tiver internet, atualiza remoto imediatamente (em background, não bloqueia)
+      Remote.rejectRequestRemote(requestId, notes)
+        .then(() => {
+          // Dispara processamento de fila para garantir que qualquer item pendente seja processado
+          SyncWorker.processQueue().catch(() => {
+            // Silent fail - will retry later
+          });
+        })
+        .catch(() => {
+          // Se falhar no remoto, enfileira para retry (em background)
+          SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes }).catch(() => {
+            // Silent fail
+          });
         });
-      } catch (error) {
-        // Se falhar no remoto, enfileira para retry
-        await SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes });
-      }
     } else {
-      // 4. Se não tiver internet, apenas enfileira
-      await SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes });
+      // 4. Se não tiver internet, apenas enfileira (em background)
+      SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes }).catch(() => {
+        // Silent fail
+      });
     }
   }
 };

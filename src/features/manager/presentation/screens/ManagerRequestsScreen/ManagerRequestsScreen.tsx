@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ManagerRequestsStackParamList } from '../../../../../app/navigation/manager/stacks/ManagerRequestsStack';
@@ -24,20 +24,59 @@ type NavigationProp = NativeStackNavigationProp<ManagerRequestsStackParamList, '
 
 export const ManagerRequestsScreen = () => {
   const [activeFilter, setActiveFilter] = useState('Todas');
+  const [lastFilter, setLastFilter] = useState<string | null>(null);
   const navigation = useNavigation<NavigationProp>();
-  const { requests, isLoading, fetchRequests, subscribeToRealtime, unsubscribeFromRealtime } = useManagerStore();
+  const { 
+    requests, 
+    isLoading, 
+    isLoadingMore,
+    hasMore,
+    fetchRequests, 
+    loadMoreRequests,
+    subscribeToRealtime, 
+    unsubscribeFromRealtime 
+  } = useManagerStore();
+
+  // Fetch quando o filtro muda
+  React.useEffect(() => {
+    if (activeFilter !== lastFilter) {
+      fetchRequests(activeFilter, true); // Reset when filter changes
+      setLastFilter(activeFilter);
+    }
+  }, [activeFilter, lastFilter, fetchRequests]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchRequests(activeFilter);
+      // Só busca se não tiver dados (primeira carga)
+      // Após aprovação/rejeição, os dados já estão atualizados no store
+      if (requests.length === 0) {
+        fetchRequests(activeFilter, true);
+      }
       subscribeToRealtime();
       
       return () => {
         // We don't unsubscribe on blur to keep updates coming if we go to details
         // But we should consider if we want to unsubscribe when leaving the stack
       };
-    }, [activeFilter, fetchRequests, subscribeToRealtime])
+    }, [requests.length, fetchRequests, activeFilter, subscribeToRealtime])
   );
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !isLoadingMore && !isLoading) {
+      loadMoreRequests();
+    }
+  }, [hasMore, isLoadingMore, isLoading, loadMoreRequests]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchRequests(activeFilter, true); // Reset e recarrega do início
+    } finally {
+      setRefreshing(false);
+    }
+  }, [activeFilter, fetchRequests]);
   
   // Also use useEffect for mounting/unmounting
   React.useEffect(() => {
@@ -74,10 +113,27 @@ export const ManagerRequestsScreen = () => {
                 estimatedItemSize={80}
                 keyExtractor={(item: TeamRequest) => item.id}
                 contentContainerStyle={styles.listContainer}
+                refreshControl={
+                  <RefreshControl 
+                    refreshing={refreshing || (isLoading && requests.length > 0)} 
+                    onRefresh={onRefresh}
+                    colors={[theme.colors.primary]}
+                    tintColor={theme.colors.primary}
+                  />
+                }
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
                 ListEmptyComponent={
                     <View style={{ alignItems: 'center', marginTop: 50 }}>
                         <Text variant="body" color="text.secondary">Nenhuma solicitação encontrada.</Text>
                     </View>
+                }
+                ListFooterComponent={
+                  isLoadingMore ? (
+                    <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                    </View>
+                  ) : null
                 }
                 renderItem={({ item }: { item: TeamRequest }) => (
                   <TeamRequestListItem

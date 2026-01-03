@@ -1,6 +1,10 @@
 import { TeamRequest } from '../entities/TeamRequest';
-import { ManagerRepository } from '../repositories/ManagerRepository';
+import { ManagerRepository, PaginatedResult } from '../repositories/ManagerRepository';
 
-export const getTeamRequestsUseCase = (repository: ManagerRepository) => (filter?: string): Promise<TeamRequest[]> => {
-  return repository.getTeamRequests(filter);
+export const getTeamRequestsUseCase = (repository: ManagerRepository) => (
+  filter?: string, 
+  limit?: number, 
+  offset?: number
+): Promise<PaginatedResult<TeamRequest>> => {
+  return repository.getTeamRequests(filter, limit, offset);
 };

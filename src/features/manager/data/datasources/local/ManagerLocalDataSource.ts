@@ -43,14 +43,58 @@ export const getProfileLocal = async (): Promise<Manager | null> => {
   return null;
 };
 
-export const getTeamRequestsLocal = async (): Promise<TeamRequest[]> => {
+export const getTeamRequestsLocal = async (
+  limit?: number, 
+  offset?: number, 
+  filter?: string
+): Promise<{ data: TeamRequest[]; total?: number }> => {
   const db = await getDatabase();
-  const result = await db.getAllAsync(
-    `SELECT * FROM vacation_requests ORDER BY created_at DESC`,
-    []
-  );
+  
+  let query = `SELECT * FROM vacation_requests`;
+  const params: (string | number)[] = [];
+  
+  // Apply filter
+  if (filter && filter !== 'Todas') {
+    const normalizedFilter = filter === 'Pendentes' ? 'pending' 
+                           : filter === 'Aprovadas' ? 'approved'
+                           : filter === 'Reprovadas' ? 'rejected'
+                           : filter.toLowerCase();
+    query += ` WHERE status = ?`;
+    params.push(normalizedFilter);
+  }
+  
+  query += ` ORDER BY created_at DESC`;
+  
+  // Apply pagination
+  if (limit) {
+    query += ` LIMIT ?`;
+    params.push(limit);
+  }
+  if (offset) {
+    query += ` OFFSET ?`;
+    params.push(offset);
+  }
+  
+  const result = await db.getAllAsync<VacationRequestDB>(query, params);
+  
+  // Get total count for pagination
+  let totalCount: number | undefined;
+  if (limit || offset) {
+    let countQuery = `SELECT COUNT(*) as total FROM vacation_requests`;
+    const countParams: (string | number)[] = [];
+    if (filter && filter !== 'Todas') {
+      const normalizedFilter = filter === 'Pendentes' ? 'pending' 
+                             : filter === 'Aprovadas' ? 'approved'
+                             : filter === 'Reprovadas' ? 'rejected'
+                             : filter.toLowerCase();
+      countQuery += ` WHERE status = ?`;
+      countParams.push(normalizedFilter);
+    }
+    const countResult = await db.getAllAsync<{ total: number }>(countQuery, countParams);
+    totalCount = countResult[0]?.total;
+  }
 
-  return (result as VacationRequestDB[]).map(row => ({
+  const data = (result as VacationRequestDB[]).map(row => ({
     id: row.id,
     employeeId: row.user_id,
     title: row.title,
@@ -63,6 +107,8 @@ export const getTeamRequestsLocal = async (): Promise<TeamRequest[]> => {
     updatedAt: row.updated_at,
     notes: row.collaborator_notes
   }));
+  
+  return { data, total: totalCount };
 };
 
 export const saveRequestsLocal = async (requests: TeamRequest[]): Promise<void> => {
