@@ -74,37 +74,80 @@ export const AdminRepositoryImpl: AdminRepository = {
     console.log('[AdminRepository] Local database reports:', reportsFromLocal.totalRequests, 'requests');
     
     // 3. Tenta buscar perfis do remoto para estatísticas de usuários
-    try {
-      const remoteReports = await Remote.getReportsRemote();
-      
-      // Combina: solicitações do local (mais atualizado), perfis do remoto
-      const combinedReports: AdminReports = {
-        totalRequests: reportsFromLocal.totalRequests,
-        approvedRequests: reportsFromLocal.approvedRequests,
-        pendingRequests: reportsFromLocal.pendingRequests,
-        rejectedRequests: reportsFromLocal.rejectedRequests,
-        newRequestsThisMonth: reportsFromLocal.newRequestsThisMonth,
-        approvedRequestsThisMonth: reportsFromLocal.approvedRequestsThisMonth,
-        totalCollaborators: remoteReports.totalCollaborators,
-        totalManagers: remoteReports.totalManagers,
-        activeCollaborators: remoteReports.activeCollaborators,
-        pendingRegistrations: remoteReports.pendingRegistrations,
-        newRegistrationsThisMonth: remoteReports.newRegistrationsThisMonth,
-      };
-      
-      // Salva localmente para cache
+    if (netState.isConnected && session) {
       try {
-        await Local.saveReportsLocal(combinedReports);
-      } catch (saveError) {
-        console.warn('[AdminRepository] Error saving reports to local DB:', saveError);
+        const remoteReports = await Remote.getReportsRemote();
+        
+        // Combina: solicitações do local (mais atualizado), perfis do remoto
+        const combinedReports: AdminReports = {
+          totalRequests: reportsFromLocal.totalRequests,
+          approvedRequests: reportsFromLocal.approvedRequests,
+          pendingRequests: reportsFromLocal.pendingRequests,
+          rejectedRequests: reportsFromLocal.rejectedRequests,
+          newRequestsThisMonth: reportsFromLocal.newRequestsThisMonth,
+          approvedRequestsThisMonth: reportsFromLocal.approvedRequestsThisMonth,
+          totalCollaborators: remoteReports.totalCollaborators,
+          totalManagers: remoteReports.totalManagers,
+          activeCollaborators: remoteReports.activeCollaborators,
+          pendingRegistrations: remoteReports.pendingRegistrations,
+          newRegistrationsThisMonth: remoteReports.newRegistrationsThisMonth,
+        };
+        
+        // Salva localmente para cache (importante para funcionar offline)
+        try {
+          await Local.saveReportsLocal(combinedReports);
+          console.log('[AdminRepository] Reports saved to local database');
+        } catch (saveError) {
+          console.warn('[AdminRepository] Error saving reports to local DB:', saveError);
+        }
+        
+        return combinedReports;
+      } catch (error) {
+        console.warn('[AdminRepository] Error fetching remote reports, using local cache:', error);
+        
+        // Se falhar, tenta buscar do banco local (pode ter dados salvos de antes)
+        const localReports = await Local.getReportsLocal();
+        if (localReports) {
+          // Usa dados salvos localmente, mas mantém solicitações do local atualizado
+          return {
+            ...localReports,
+            totalRequests: reportsFromLocal.totalRequests,
+            approvedRequests: reportsFromLocal.approvedRequests,
+            pendingRequests: reportsFromLocal.pendingRequests,
+            rejectedRequests: reportsFromLocal.rejectedRequests,
+            newRequestsThisMonth: reportsFromLocal.newRequestsThisMonth,
+            approvedRequestsThisMonth: reportsFromLocal.approvedRequestsThisMonth,
+          };
+        }
+        
+        // Se não tem dados locais salvos, usa valores padrão
+        return {
+          ...reportsFromLocal,
+          totalCollaborators: 0,
+          totalManagers: 0,
+          activeCollaborators: 0,
+          pendingRegistrations: 0,
+          newRegistrationsThisMonth: 0,
+        };
+      }
+    } else {
+      // Offline: busca do banco local
+      console.log('[AdminRepository] Offline - using local reports');
+      const localReports = await Local.getReportsLocal();
+      if (localReports) {
+        // Usa dados salvos localmente, mas mantém solicitações do local atualizado
+        return {
+          ...localReports,
+          totalRequests: reportsFromLocal.totalRequests,
+          approvedRequests: reportsFromLocal.approvedRequests,
+          pendingRequests: reportsFromLocal.pendingRequests,
+          rejectedRequests: reportsFromLocal.rejectedRequests,
+          newRequestsThisMonth: reportsFromLocal.newRequestsThisMonth,
+          approvedRequestsThisMonth: reportsFromLocal.approvedRequestsThisMonth,
+        };
       }
       
-      return combinedReports;
-    } catch (error) {
-      console.warn('[AdminRepository] Error fetching remote reports, using local data only:', error);
-      
-      // Se falhar ao buscar perfis remotos, usa apenas dados locais de solicitações
-      // e valores padrão para perfis
+      // Se não tem dados locais, retorna apenas solicitações
       return {
         ...reportsFromLocal,
         totalCollaborators: 0,
@@ -218,6 +261,17 @@ export const AdminRepositoryImpl: AdminRepository = {
     // 1. SEMPRE atualiza local primeiro (optimistic update)
     const approvedUser = await Local.approveUserLocal(userId);
     if (!approvedUser) {
+      // Verifica se o usuário já foi aprovado anteriormente (pode ter sido em outra sessão)
+      const localUsers = await Local.getUsersLocal();
+      const userExists = localUsers.find(u => u.id === userId && u.status === 'active');
+      
+      if (userExists) {
+        // Usuário já está aprovado - não é um erro, apenas retorna
+        console.log('[AdminRepository] User already approved:', userId);
+        return;
+      }
+      
+      // Se realmente não existe, lança erro
       throw new Error(`Pending user not found: ${userId}`);
     }
     console.log('[AdminRepository] Local update completed for user:', userId);
@@ -257,8 +311,24 @@ export const AdminRepositoryImpl: AdminRepository = {
     console.log('[AdminRepository] Rejecting user:', userId);
     
     // 1. SEMPRE atualiza local primeiro (optimistic update)
-    await Local.rejectUserLocal(userId);
-    console.log('[AdminRepository] Local update completed for user:', userId);
+    try {
+      await Local.rejectUserLocal(userId);
+      console.log('[AdminRepository] Local update completed for user:', userId);
+    } catch (error) {
+      // Se não encontrou o usuário pendente, pode já ter sido rejeitado
+      // Verifica se ainda existe na lista de pendentes
+      const pendingUsers = await Local.getPendingUsersLocal();
+      const userStillPending = pendingUsers.find(u => u.id === userId);
+      
+      if (!userStillPending) {
+        // Usuário já foi rejeitado - não é um erro, apenas retorna
+        console.log('[AdminRepository] User already rejected:', userId);
+        return;
+      }
+      
+      // Se ainda está pendente mas deu erro ao rejeitar, lança erro
+      throw error;
+    }
     
     // 2. Verifica se tem internet e sessão ativa
     const netState = await NetInfo.fetch();

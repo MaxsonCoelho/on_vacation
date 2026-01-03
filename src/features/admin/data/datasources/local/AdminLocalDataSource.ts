@@ -78,8 +78,13 @@ export const getReportsLocal = async (): Promise<AdminReports | null> => {
 
 export const saveReportsLocal = async (reports: AdminReports): Promise<void> => {
   const db = await getDatabase();
+  
+  // Como a tabela não tem chave primária, primeiro deleta todos os registros e depois insere
+  // Isso garante que sempre temos apenas um registro com os dados mais atualizados
+  await db.runAsync('DELETE FROM admin_reports', []);
+  
   await db.runAsync(
-    `INSERT OR REPLACE INTO admin_reports (
+    `INSERT INTO admin_reports (
       total_requests, approved_requests, pending_requests, rejected_requests,
       total_collaborators, total_managers, active_collaborators, pending_registrations,
       new_requests_this_month, approved_requests_this_month, new_registrations_this_month
@@ -98,6 +103,8 @@ export const saveReportsLocal = async (reports: AdminReports): Promise<void> => 
       reports.newRegistrationsThisMonth,
     ]
   );
+  
+  console.log('[AdminLocalDataSource] Reports saved to local database');
 };
 
 export const getPendingUsersLocal = async (): Promise<PendingUser[]> => {
