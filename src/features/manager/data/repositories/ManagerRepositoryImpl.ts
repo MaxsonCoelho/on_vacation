@@ -21,8 +21,6 @@ const updateLocalRequestNames = async (requests: TeamRequest[]): Promise<void> =
 
     if (userIdsToUpdate.length === 0) return;
 
-    console.log('[ManagerRepository] Updating names for user_ids:', userIdsToUpdate);
-
     // Buscar profiles do Supabase
     const { data: profilesData } = await supabase
       .from('profiles')
@@ -30,7 +28,6 @@ const updateLocalRequestNames = async (requests: TeamRequest[]): Promise<void> =
       .in('id', userIdsToUpdate);
 
     if (!profilesData || profilesData.length === 0) {
-      console.warn('[ManagerRepository] No profiles found for user_ids');
       return;
     }
 
@@ -55,7 +52,6 @@ const updateLocalRequestNames = async (requests: TeamRequest[]): Promise<void> =
     // Salvar as solicitações atualizadas
     if (requestsToUpdate.length > 0) {
       await Local.saveRequestsLocal(requestsToUpdate);
-      console.log('[ManagerRepository] Updated', requestsToUpdate.length, 'requests with profile names');
     }
   } catch (error) {
     console.warn('[ManagerRepository] Error updating local request names:', error);
@@ -74,9 +70,7 @@ export const ManagerRepositoryImpl: ManagerRepository = {
   },
 
   getTeamRequests: async (filter?: string): Promise<TeamRequest[]> => {
-    console.log('[ManagerRepository] Getting team requests...');
     let requests = await Local.getTeamRequestsLocal();
-    console.log('[ManagerRepository] Local requests count:', requests.length);
     
     // Sempre tenta buscar do remoto para atualizar os dados
     try {
@@ -89,7 +83,6 @@ export const ManagerRepositoryImpl: ManagerRepository = {
                 // Re-fetch from local to get the merged state (remote + preserved local changes)
                 requests = await Local.getTeamRequestsLocal();
             } catch (saveError) {
-                console.warn('[ManagerRepository] Error saving to local DB:', saveError);
                 // Usa dados remotos em memória mesmo se não conseguir salvar
                 requests = remoteRequests;
             }
@@ -100,7 +93,6 @@ export const ManagerRepositoryImpl: ManagerRepository = {
             requests = await Local.getTeamRequestsLocal();
         }
     } catch (e) {
-        console.warn('[ManagerRepository] Error fetching remote requests', e);
         // Se falhou e tem dados locais, tenta atualizar os nomes dos profiles
         if (requests.length > 0) {
             await updateLocalRequestNames(requests);
@@ -126,7 +118,6 @@ export const ManagerRepositoryImpl: ManagerRepository = {
   approveRequest: async (requestId: string, notes?: string): Promise<void> => {
     // 1. Sempre atualiza local primeiro (optimistic UI)
     await Local.updateRequestStatusLocal(requestId, 'approved', notes);
-    console.log('[ManagerRepository] Local update completed for request:', requestId);
     
     // 2. Verifica se tem internet e sessão ativa
     const netState = await NetInfo.fetch();
@@ -135,32 +126,25 @@ export const ManagerRepositoryImpl: ManagerRepository = {
     if (netState.isConnected && session) {
       // 3. Se tiver internet, atualiza remoto imediatamente
       try {
-        console.log('[ManagerRepository] Online - updating remote immediately for request:', requestId);
         await Remote.approveRequestRemote(requestId, notes);
-        console.log('[ManagerRepository] Remote update successful for request:', requestId);
         
         // Dispara processamento de fila para garantir que qualquer item pendente seja processado
-        SyncWorker.processQueue().catch(err => {
-          console.warn('[ManagerRepository] Error processing queue after approval:', err);
+        SyncWorker.processQueue().catch(() => {
+          // Silent fail - will retry later
         });
       } catch (error) {
         // Se falhar no remoto, enfileira para retry
-        console.error('[ManagerRepository] Remote update failed, queuing for retry:', error);
         await SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes });
-        console.log('[ManagerRepository] Request queued for sync:', requestId);
       }
     } else {
       // 4. Se não tiver internet, apenas enfileira
-      console.log('[ManagerRepository] Offline - queuing for sync. Request:', requestId);
       await SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes });
-      console.log('[ManagerRepository] Request queued for sync:', requestId);
     }
   },
 
   rejectRequest: async (requestId: string, notes?: string): Promise<void> => {
     // 1. Sempre atualiza local primeiro (optimistic UI)
     await Local.updateRequestStatusLocal(requestId, 'rejected', notes);
-    console.log('[ManagerRepository] Local update completed for request:', requestId);
     
     // 2. Verifica se tem internet e sessão ativa
     const netState = await NetInfo.fetch();
@@ -169,25 +153,19 @@ export const ManagerRepositoryImpl: ManagerRepository = {
     if (netState.isConnected && session) {
       // 3. Se tiver internet, atualiza remoto imediatamente
       try {
-        console.log('[ManagerRepository] Online - updating remote immediately for request:', requestId);
         await Remote.rejectRequestRemote(requestId, notes);
-        console.log('[ManagerRepository] Remote update successful for request:', requestId);
         
         // Dispara processamento de fila para garantir que qualquer item pendente seja processado
-        SyncWorker.processQueue().catch(err => {
-          console.warn('[ManagerRepository] Error processing queue after rejection:', err);
+        SyncWorker.processQueue().catch(() => {
+          // Silent fail - will retry later
         });
       } catch (error) {
         // Se falhar no remoto, enfileira para retry
-        console.error('[ManagerRepository] Remote update failed, queuing for retry:', error);
         await SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes });
-        console.log('[ManagerRepository] Request queued for sync:', requestId);
       }
     } else {
       // 4. Se não tiver internet, apenas enfileira
-      console.log('[ManagerRepository] Offline - queuing for sync. Request:', requestId);
       await SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes });
-      console.log('[ManagerRepository] Request queued for sync:', requestId);
     }
   }
 };

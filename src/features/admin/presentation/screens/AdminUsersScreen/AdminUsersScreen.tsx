@@ -68,7 +68,6 @@ export const AdminUsersScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[AdminUsersScreen] Screen focused - syncing users...');
       // Sempre busca do remoto quando focar na tela (se online) para sincronizar
       fetchUsers(activeFilter);
       subscribeToRealtime();

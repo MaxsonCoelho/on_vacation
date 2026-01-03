@@ -43,7 +43,6 @@ export const VacationHistoryScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[VacationHistory] Focus effect triggered');
       if (user?.id) {
         fetchRequests(user.id);
       }
@@ -59,7 +58,6 @@ export const VacationHistoryScreen = () => {
   }, [user?.id, fetchRequests]);
 
   const getFilteredRequests = () => {
-    console.log('[VacationHistory] Filtering requests. Total:', requests.length, 'Filter:', activeFilter);
     if (activeFilter === 'Todos') return requests;
     
     const statusMap: Record<string, string> = {

@@ -45,8 +45,6 @@ export const CollaboratorHomeScreen = () => {
   const getFirstName = (fullName?: string) => {
     return fullName?.split(' ')[0] || 'Colaborador';
   };
-
-  console.log('[CollaboratorHome] Requests in store:', requests.length);
   
   const totalRequests = requests.length;
   const pendingRequests = requests.filter((r: VacationRequest) => r.status === 'pending').length;

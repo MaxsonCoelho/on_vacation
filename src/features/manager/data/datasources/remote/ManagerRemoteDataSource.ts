@@ -3,7 +3,6 @@ import { Manager } from '../../../domain/entities/Manager';
 import { TeamRequest, RequestStatus } from '../../../domain/entities/TeamRequest';
 
 export const getProfileRemote = async (userId: string): Promise<Manager> => {
-  console.log('[ManagerRemoteDataSource] Fetching profile for:', userId);
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -14,8 +13,6 @@ export const getProfileRemote = async (userId: string): Promise<Manager> => {
       console.error('[ManagerRemoteDataSource] Error fetching profile:', error);
       throw error;
   }
-  
-  console.log('[ManagerRemoteDataSource] Profile loaded. Role:', data.role);
 
   return {
     id: data.id,
@@ -45,11 +42,8 @@ interface RemoteRequestDB {
 }
 
 export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
-  console.log('[ManagerRemoteDataSource] Fetching from Supabase...');
-  
   // Debug: Check user session first
   const { data: { user } } = await supabase.auth.getUser();
-  console.log('[ManagerRemoteDataSource] Current User ID:', user?.id);
 
   if (user?.id) {
       let { data: profile, error: profileError } = await supabase
@@ -60,8 +54,6 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
       
       // If profile is missing (PGRST116 is "The result contains 0 rows" for .single()), try to create it
       if (profileError && profileError.code === 'PGRST116') {
-          console.warn('[ManagerRemoteDataSource] Profile not found for user. Attempting to auto-create Manager profile...');
-          
           const { error: createError } = await supabase
             .from('profiles')
             .insert({
@@ -75,23 +67,18 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
           if (createError) {
               console.error('[ManagerRemoteDataSource] Failed to auto-create profile:', createError);
           } else {
-              console.log('[ManagerRemoteDataSource] Manager profile created successfully. Retrying fetch...');
               // Retry fetching role
               const retry = await supabase.from('profiles').select('role').eq('id', user.id).single();
               profile = retry.data;
               profileError = retry.error;
           }
       }
-      
-      console.log('[ManagerRemoteDataSource] Current User Role:', profile?.role, 'Error:', profileError?.message);
   }
 
   // Debug: Try fetching without join first to check RLS on main table
-  const { count, error: countError } = await supabase
+  const { count } = await supabase
     .from('vacation_requests')
     .select('*', { count: 'exact', head: true });
-    
-  console.log('[ManagerRemoteDataSource] Total requests visible to user (count):', count, 'Error:', countError?.message);
 
   const { data, error } = await supabase
     .from('vacation_requests')
@@ -103,28 +90,18 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
     throw error;
   }
 
-  console.log('[ManagerRemoteDataSource] Data received:', data?.length);
-  if (data && data.length > 0) {
-      console.log('[ManagerRemoteDataSource] First item sample:', JSON.stringify(data[0], null, 2));
-      console.log('[ManagerRemoteDataSource] Profiles type check:', typeof data[0].profiles, Array.isArray(data[0].profiles));
-  } else {
+  if (!data || data.length === 0) {
       // If data is empty but count was > 0, it means the join failed (RLS on profiles?)
       if (count && count > 0) {
-          console.warn('[ManagerRemoteDataSource] WARNING: Requests exist but query returned 0. Possible issue with "profiles" join/RLS.');
-          
           // Fallback: Fetch without profiles join
-          console.log('[ManagerRemoteDataSource] Attempting fallback fetch without profiles...');
-          const { data: fallbackData, error: fallbackError } = await supabase
+          const { data: fallbackData } = await supabase
             .from('vacation_requests')
             .select('*')
             .order('created_at', { ascending: false });
             
-           if (!fallbackError && fallbackData && fallbackData.length > 0) {
-               console.log('[ManagerRemoteDataSource] Fallback data received:', fallbackData.length);
-               
+           if (fallbackData && fallbackData.length > 0) {
                // Manually fetch profiles
                const userIds = [...new Set(fallbackData.map(r => r.user_id))];
-               console.log('[ManagerRemoteDataSource] Fetching profiles for users:', userIds);
                
                const { data: profilesData } = await supabase
                  .from('profiles')
@@ -192,8 +169,6 @@ export const getTeamRequestsRemote = async (): Promise<TeamRequest[]> => {
 export const approveRequestRemote = async (requestId: string, notes?: string): Promise<void> => {
   const now = new Date().toISOString();
   
-  console.log('[ManagerRemoteDataSource] Starting approval for request:', requestId);
-  
   // 1. Atualizar status na tabela vacation_requests
   const { data: updateData, error: updateError } = await supabase
     .from('vacation_requests')
@@ -216,8 +191,6 @@ export const approveRequestRemote = async (requestId: string, notes?: string): P
     throw error;
   }
 
-  console.log('[ManagerRemoteDataSource] vacation_requests updated successfully:', updateData);
-
   // 2. Inserir registro no histórico de status
   const { data: historyData, error: historyError } = await supabase
     .from('vacation_status_history')
@@ -233,17 +206,12 @@ export const approveRequestRemote = async (requestId: string, notes?: string): P
   if (historyError) {
     // Log o erro mas não falha a operação principal se o histórico falhar
     // Isso garante que a atualização do status sempre aconteça
-    console.warn('[ManagerRemoteDataSource] Error inserting status history (non-critical):', historyError);
     // Não lança erro para não bloquear a atualização principal
-  } else {
-    console.log('[ManagerRemoteDataSource] Status history recorded successfully:', historyData);
   }
 };
 
 export const rejectRequestRemote = async (requestId: string, notes?: string): Promise<void> => {
   const now = new Date().toISOString();
-  
-  console.log('[ManagerRemoteDataSource] Starting rejection for request:', requestId);
   
   // 1. Atualizar status na tabela vacation_requests
   const { data: updateData, error: updateError } = await supabase
@@ -267,8 +235,6 @@ export const rejectRequestRemote = async (requestId: string, notes?: string): Pr
     throw error;
   }
 
-  console.log('[ManagerRemoteDataSource] vacation_requests updated successfully:', updateData);
-
   // 2. Inserir registro no histórico de status
   const { data: historyData, error: historyError } = await supabase
     .from('vacation_status_history')
@@ -284,9 +250,6 @@ export const rejectRequestRemote = async (requestId: string, notes?: string): Pr
   if (historyError) {
     // Log o erro mas não falha a operação principal se o histórico falhar
     // Isso garante que a atualização do status sempre aconteça
-    console.warn('[ManagerRemoteDataSource] Error inserting status history (non-critical):', historyError);
     // Não lança erro para não bloquear a atualização principal
-  } else {
-    console.log('[ManagerRemoteDataSource] Status history recorded successfully:', historyData);
   }
 };

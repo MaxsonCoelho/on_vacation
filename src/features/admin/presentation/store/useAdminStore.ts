@@ -123,8 +123,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         });
         
         // Atualiza relatórios (sem lançar erro se falhar)
-        get().fetchReports(false).catch(err => {
-          console.warn('[AdminStore] Error fetching reports after approval (non-critical):', err);
+        get().fetchReports(false).catch(() => {
+          // Silent fail - will retry later
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -141,8 +141,6 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         
         if (workedLocally) {
           // Funcionou localmente - atualiza estado e não lança erro
-          console.log('[AdminStore] User approved locally (offline mode). Error was non-critical:', errorMessage);
-          
           const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
           const currentUsers = get().users;
           let updatedUsers = currentUsers;
@@ -185,8 +183,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       set({ pendingUsers: updatedPendingUsers, isLoading: false });
       
       // Atualiza relatórios (sem lançar erro se falhar)
-      get().fetchReports(false).catch(err => {
-        console.warn('[AdminStore] Error fetching reports after rejection (non-critical):', err);
+      get().fetchReports(false).catch(() => {
+        // Silent fail - will retry later
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -200,7 +198,6 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       
       if (workedLocally) {
         // Funcionou localmente - atualiza estado e não lança erro
-        console.log('[AdminStore] User rejected locally (offline mode). Error was non-critical:', errorMessage);
         const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
         set({ pendingUsers: updatedPendingUsers, isLoading: false });
       } else {
@@ -226,8 +223,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       set({ users: updatedUsers, isLoading: false });
       
       // Atualiza relatórios (sem lançar erro se falhar)
-      get().fetchReports(false).catch(err => {
-        console.warn('[AdminStore] Error fetching reports after status update (non-critical):', err);
+      get().fetchReports(false).catch(() => {
+        // Silent fail - will retry later
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -242,22 +239,17 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     
     const newCount = subscribersCount + 1;
     set({ subscribersCount: newCount });
-    console.log(`[AdminStore] Subscribing... Count: ${newCount}`);
 
     if (subscription) return;
 
-    console.log('[AdminStore] Initializing Supabase subscription...');
     const newSubscription = supabase
       .channel('admin:updates')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'vacation_requests' },
-        async (payload) => {
-          console.log('[AdminStore] Vacation request update received:', payload.eventType, payload.new || payload.old);
-          
+        async () => {
           // Pequeno delay para garantir que a mudança foi persistida
           setTimeout(() => {
-            console.log('[AdminStore] Refreshing reports after vacation_requests change...');
             fetchReports(false); // Atualiza relatórios sem loading
           }, 500);
         }
@@ -265,12 +257,9 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'profiles' },
-        async (payload) => {
-          console.log('[AdminStore] Profile update received:', payload.eventType, payload.new || payload.old);
-          
+        async () => {
           // Pequeno delay para garantir que a mudança foi persistida
           setTimeout(() => {
-            console.log('[AdminStore] Refreshing data after profiles change...');
             fetchReports(false); // Atualiza relatórios
             fetchPendingUsers(false); // Atualiza pendentes
             fetchUsers(undefined, false); // Atualiza usuários
@@ -287,10 +276,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     
     const newCount = Math.max(0, subscribersCount - 1);
     set({ subscribersCount: newCount });
-    console.log(`[AdminStore] Unsubscribing... Count: ${newCount}`);
 
     if (newCount === 0 && subscription) {
-      console.log('[AdminStore] Removing Supabase subscription (no listeners left)');
       supabase.removeChannel(subscription);
       set({ subscription: null });
     }

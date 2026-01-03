@@ -29,11 +29,9 @@ export const SyncQueue = {
     if (netState.isConnected && session) {
       // Trigger sync immediately only if online (fire and forget)
       // This ensures "online" behavior is fast
-      SyncWorker.processQueue().catch(err => {
-        console.warn('[SyncQueue] Auto-sync failed (will retry later):', err);
+      SyncWorker.processQueue().catch(() => {
+        // Silent fail - will retry later
       });
-    } else {
-      console.log(`[SyncQueue] Item ${item.id} (type: ${item.type}) queued for sync when connection is restored`);
     }
     
     return item;

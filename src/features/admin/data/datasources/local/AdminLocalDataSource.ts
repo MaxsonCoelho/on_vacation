@@ -103,8 +103,6 @@ export const saveReportsLocal = async (reports: AdminReports): Promise<void> => 
       reports.newRegistrationsThisMonth,
     ]
   );
-  
-  console.log('[AdminLocalDataSource] Reports saved to local database');
 };
 
 export const getPendingUsersLocal = async (): Promise<PendingUser[]> => {
@@ -195,7 +193,6 @@ export const approveUserLocal = async (userId: string): Promise<User | null> => 
   );
   
   if (pendingResult.length === 0) {
-    console.warn('[AdminLocalDataSource] Pending user not found:', userId);
     return null;
   }
   
@@ -221,7 +218,6 @@ export const approveUserLocal = async (userId: string): Promise<User | null> => 
     [activeUser.id, activeUser.name, activeUser.email, activeUser.role, activeUser.status, activeUser.createdAt, null]
   );
   
-  console.log('[AdminLocalDataSource] User approved locally:', userId);
   return activeUser;
 };
 
@@ -231,8 +227,6 @@ export const rejectUserLocal = async (userId: string): Promise<void> => {
   
   // Remove do admin_pending_users
   await db.runAsync('DELETE FROM admin_pending_users WHERE id = ?', [userId]);
-  
-  console.log('[AdminLocalDataSource] User rejected locally:', userId);
 };
 
 // Função para atualizar status do usuário localmente (optimistic update)
@@ -244,8 +238,6 @@ export const updateUserStatusLocal = async (userId: string, status: 'active' | '
     'UPDATE admin_users SET status = ? WHERE id = ?',
     [status, userId]
   );
-  
-  console.log('[AdminLocalDataSource] User status updated locally:', userId, status);
 };
 
 // Função para recalcular reports a partir dos dados locais (chamada após ações offline)
@@ -316,8 +308,6 @@ export const recalculateReportsFromLocal = async (): Promise<AdminReports> => {
   
   // 7. Salvar os reports recalculados no banco local
   await saveReportsLocal(reports);
-  
-  console.log('[AdminLocalDataSource] Reports recalculated from local data:', reports);
   
   return reports;
 };

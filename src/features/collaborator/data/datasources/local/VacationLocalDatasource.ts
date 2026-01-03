@@ -18,7 +18,6 @@ export const saveRequestLocal = async (request: VacationRequest): Promise<void> 
       request.requesterName ?? null,
       request.requesterAvatar ?? null
     ];
-    console.log('[VacationLocalDatasource] Saving request with params:', JSON.stringify(params));
     
     await db.runAsync(
       `INSERT OR REPLACE INTO vacation_requests (
@@ -49,12 +48,10 @@ interface VacationRequestDB {
 
 export const getRequestsLocal = async (userId: string): Promise<VacationRequest[]> => {
   if (!userId) {
-      console.warn('[VacationLocalDatasource] getRequestsLocal called with empty userId');
       return [];
   }
 
   const db = await getDatabase();
-  console.log('[VacationLocalDatasource] Fetching requests for user:', userId);
   
   try {
     // Using parameterized query correctly with runAsync/getAllAsync

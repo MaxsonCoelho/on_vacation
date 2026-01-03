@@ -56,7 +56,6 @@ export const ForgotPasswordScreen: React.FC<Props> = ({ route, navigation }) => 
 
   const handleSendResetLink = () => {
     // Mock logic for sending reset link
-    console.log('Reset link sent to', email);
     setDialog({
       visible: true,
       title: 'E-mail enviado',

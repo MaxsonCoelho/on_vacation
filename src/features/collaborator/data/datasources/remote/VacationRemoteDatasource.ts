@@ -27,8 +27,6 @@ export const getRequestsRemote = async (userId: string): Promise<VacationRequest
     throw new Error(error.message);
   }
 
-  console.log('[RemoteDatasource] Raw data received:', data?.length);
-
   // Map DB columns to Entity
   return (data as VacationRequestDB[]).map((item) => {
     // Manually parse date string to avoid timezone issues
@@ -70,8 +68,6 @@ export const createRequestRemote = async (
     status: request.status || 'pending',
   };
 
-  console.log('[VacationRemoteDatasource] Creating request payload:', JSON.stringify(payload));
-
   // 1. Criar solicitação na tabela vacation_requests
   const { data: insertData, error: insertError } = await supabase
     .from('vacation_requests')
@@ -82,8 +78,6 @@ export const createRequestRemote = async (
     console.error('[VacationRemoteDatasource] Error creating vacation request:', insertError);
     throw new Error(insertError.message);
   }
-
-  console.log('[VacationRemoteDatasource] Request created successfully:', insertData);
 
   // 2. Criar registro inicial no histórico de status
   const { data: historyData, error: historyError } = await supabase
@@ -99,8 +93,6 @@ export const createRequestRemote = async (
 
   if (historyError) {
     // Log o erro mas não falha a operação principal se o histórico falhar
-    console.warn('[VacationRemoteDatasource] Error inserting initial status history (non-critical):', historyError);
-  } else {
-    console.log('[VacationRemoteDatasource] Initial status history recorded:', historyData);
+    // Silent fail - status history is non-critical
   }
 };

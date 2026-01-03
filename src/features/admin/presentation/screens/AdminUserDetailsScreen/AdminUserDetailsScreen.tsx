@@ -54,7 +54,6 @@ export const AdminUserDetailsScreen = () => {
 
   const handleChangeProfile = () => {
     // TODO: Implementar alteração de perfil
-    console.log('Alterar perfil:', name);
   };
 
   const handleDeactivateUser = () => {

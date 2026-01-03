@@ -17,7 +17,6 @@ export const NetworkMonitor = {
       useOfflineStore.getState().setOnlineStatus(isOnline);
 
       if (isOnline && wasOffline) {
-        console.log('[Offline] Connection restored. Triggering sync...');
         SyncEngine.start();
       }
     });

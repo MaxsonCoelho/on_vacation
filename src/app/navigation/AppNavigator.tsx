@@ -19,18 +19,8 @@ export const AppNavigator: React.FC = () => {
   const { user, isInitialized, checkAuth } = useAuthStore();
 
   useEffect(() => {
-    console.log('[AppNavigator] Initial mount, checking auth...');
     checkAuth();
   }, []);
-  
-  useEffect(() => {
-    console.log('[AppNavigator] User or isInitialized changed:', { 
-      hasUser: !!user, 
-      userRole: user?.role, 
-      userStatus: user?.status,
-      isInitialized 
-    });
-  }, [user, isInitialized]);
 
   if (!isInitialized) {
     return (

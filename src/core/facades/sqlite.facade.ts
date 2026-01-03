@@ -8,7 +8,6 @@ export const saveSession = async (id: string, email: string, name: string, role:
       'INSERT OR REPLACE INTO auth_session (id, email, name, role, status, created_at, avatar) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [id, email, name, role, status, created_at, avatar ?? null]
     );
-    console.log('[SQLite] Sessão salva.');
   } catch (error) {
     console.error('[SQLite] Erro ao salvar sessão:', error);
     throw error;
@@ -40,7 +39,6 @@ export const clearSession = async () => {
     const db = await getDatabase();
     // Use runAsync for delete
     await db.runAsync('DELETE FROM auth_session');
-    console.log('[SQLite] Sessão limpa.');
   } catch (error) {
     console.error('[SQLite] Erro ao limpar sessão:', error);
     throw error;
@@ -53,7 +51,6 @@ export const clearSession = async () => {
  */
 export const _test_resetDB = async () => {
   if (process.env.NODE_ENV !== 'test') {
-    console.warn('Attempted to reset DB outside of test environment');
     return;
   }
   await clearSession();
@@ -63,9 +60,7 @@ export const _test_resetDB = async () => {
     const db = await getDatabase();
     await db.execAsync('DELETE FROM vacation_requests');
     await db.execAsync('DELETE FROM sync_queue');
-    console.log('[SQLite] DB reset complete (session, vacation_requests, sync_queue).');
   } catch (error) {
     // Tables might not exist yet, which is fine
-    console.log('[SQLite] DB reset partial (tables might not exist).', error);
   }
 };

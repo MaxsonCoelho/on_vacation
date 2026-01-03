@@ -32,14 +32,7 @@ export const useLoginViewModel = () => {
     try {
       const user = await signIn(email, password);
       
-      console.log('[LoginViewModel] Role validation:', {
-        selectedRole: role,
-        userRole: user.role,
-        match: user.role === role
-      });
-      
       if (user.role !== role) {
-        console.log('[LoginViewModel] Role mismatch, signing out...');
         await signOut();
         setFeedback({
           visible: true,
@@ -60,8 +53,6 @@ export const useLoginViewModel = () => {
         });
         return;
       }
-      
-      console.log('[LoginViewModel] Login successful for role:', role);
       
     } catch (error: unknown) {
       let errorMessage = 'Ocorreu um erro ao tentar fazer login.';

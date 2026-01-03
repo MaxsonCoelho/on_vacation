@@ -26,7 +26,6 @@ export const AdminReportsScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      console.log('[AdminReportsScreen] Screen focused - syncing reports...');
       // Sempre sincroniza quando focar na tela (se online)
       fetchReports();
       subscribeToRealtime();

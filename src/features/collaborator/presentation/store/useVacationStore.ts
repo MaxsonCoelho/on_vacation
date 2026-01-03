@@ -27,7 +27,6 @@ export const useVacationStore = create<VacationState>((set, get) => ({
   subscribersCount: 0,
 
   fetchRequests: async (userId: string) => {
-    console.log('[useVacationStore] Fetching requests for user:', userId);
     // Only show loading on initial empty state to avoid flickering
     if (get().requests.length === 0) {
         set({ isLoading: true, error: null });
@@ -36,7 +35,6 @@ export const useVacationStore = create<VacationState>((set, get) => ({
     try {
       const getRequests = getVacationRequestsUseCase(VacationRepositoryImpl);
       const requests = await getRequests(userId);
-      console.log('[useVacationStore] Fetched requests count:', requests.length);
       set({ requests, isLoading: false });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -50,11 +48,9 @@ export const useVacationStore = create<VacationState>((set, get) => ({
       
       const newCount = subscribersCount + 1;
       set({ subscribersCount: newCount });
-      console.log(`[useVacationStore] Subscribing... Count: ${newCount}`);
 
       if (subscription) return;
 
-      console.log('[useVacationStore] Initializing Supabase subscription for user:', userId);
       const newSubscription = supabase
         .channel(`public:vacation_requests:user:${userId}`)
         .on(
@@ -65,8 +61,7 @@ export const useVacationStore = create<VacationState>((set, get) => ({
                 table: 'vacation_requests',
                 filter: `user_id=eq.${userId}`
             }, 
-            (payload) => {
-                console.log('[useVacationStore] Realtime update received:', payload);
+            () => {
                 fetchRequests(userId);
             }
         )
@@ -80,10 +75,8 @@ export const useVacationStore = create<VacationState>((set, get) => ({
       
       const newCount = Math.max(0, subscribersCount - 1);
       set({ subscribersCount: newCount });
-      console.log(`[useVacationStore] Unsubscribing... Count: ${newCount}`);
 
       if (newCount === 0 && subscription) {
-          console.log('[useVacationStore] Removing Supabase subscription (no listeners left)');
           supabase.removeChannel(subscription);
           set({ subscription: null });
       }

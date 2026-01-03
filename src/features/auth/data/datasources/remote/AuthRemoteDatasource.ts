@@ -30,15 +30,6 @@ export const loginRemote = async (email: string, password: string): Promise<User
     const rawStatus = (userProfile.status || 'active').trim().toLowerCase();
     const isActive = rawStatus === 'active';
     
-    console.log('[AuthRemote] User status check:', {
-        userId: data.user.id,
-        email: data.user.email,
-        rawStatus: userProfile.status,
-        normalizedStatus: rawStatus,
-        isActive,
-        role: userProfile.role
-    });
-    
     if (!isActive) {
         // Faz logout para limpar a sessão
         await supabase.auth.signOut();

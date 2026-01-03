@@ -90,8 +90,6 @@ export const RequestVacationScreen = () => {
         collaboratorNotes: data.reason,
       });
 
-      console.log('[RequestVacation] Request created successfully');
-
       setToast({
         visible: true,
         message: 'Solicitação enviada com sucesso!',

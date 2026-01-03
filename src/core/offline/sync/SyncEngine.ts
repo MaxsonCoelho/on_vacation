@@ -20,7 +20,6 @@ export const SyncEngine = {
         const strategy = SyncStrategies.get(item.type);
 
         if (!strategy) {
-          console.error(`[SyncEngine] No strategy found for type: ${item.type}`);
           // Mark as failed so we don't loop forever? Or keep pending?
           // Let's mark as failed for now.
           await QueueRepository.updateStatus(item.id, 'failed');
@@ -28,13 +27,11 @@ export const SyncEngine = {
         }
 
         try {
-          console.log(`[SyncEngine] Processing item ${item.id} of type ${item.type}`);
           await QueueRepository.updateStatus(item.id, 'processing');
           
           await strategy(item.payload);
           
           await QueueRepository.remove(item.id);
-          console.log(`[SyncEngine] Item ${item.id} completed`);
         } catch (error) {
           console.error(`[SyncEngine] Error processing item ${item.id}:`, error);
           await QueueRepository.incrementRetry(item.id);

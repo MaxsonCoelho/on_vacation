@@ -64,14 +64,12 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
       const { subscription, fetchRequests } = get();
       if (subscription) return; // Already subscribed
 
-      console.log('[ManagerStore] Subscribing to realtime updates...');
       const newSubscription = supabase
         .channel('public:vacation_requests')
         .on(
             'postgres_changes', 
             { event: '*', schema: 'public', table: 'vacation_requests' }, 
-            (payload) => {
-                console.log('[ManagerStore] Realtime update received:', payload);
+            () => {
                 fetchRequests(undefined, false); // Refresh list without loading state
             }
         )
@@ -83,7 +81,6 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
   unsubscribeFromRealtime: () => {
       const { subscription } = get();
       if (subscription) {
-          console.log('[ManagerStore] Unsubscribing from realtime...');
           supabase.removeChannel(subscription);
           set({ subscription: null });
       }

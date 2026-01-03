@@ -28,7 +28,6 @@ export const getDocumentSnapshot = async <T>(collection: string, id: string): Pr
  */
 export const _test_verifyAuth = async (email: string, pass: string) => {
   if (process.env.NODE_ENV !== 'test') {
-    console.warn('Attempted to verify auth outside of test environment');
     return { error: 'Not in test environment' };
   }
   return await supabase.auth.signInWithPassword({ email, password: pass });
