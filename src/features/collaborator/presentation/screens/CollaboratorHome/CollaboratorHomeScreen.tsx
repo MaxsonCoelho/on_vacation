@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, ActivityIndicator, RefreshControl } from 'react-native';
 import { 
   ScreenContainer, 
   Text, 
@@ -26,6 +26,7 @@ export const CollaboratorHomeScreen = () => {
   const { requests, isLoading, fetchRequests, subscribeToRealtime, unsubscribeFromRealtime } = useVacationStore();
   const { profile, fetchProfile } = useProfileStore();
   const navigation = useNavigation<HomeNavigationProp>();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
       if (user?.id) {
@@ -42,6 +43,20 @@ export const CollaboratorHomeScreen = () => {
       }
     }, [user?.id, fetchRequests, fetchProfile])
   );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (user?.id) {
+        await Promise.all([
+          fetchRequests(user.id),
+          fetchProfile(user.id)
+        ]);
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [user?.id, fetchRequests, fetchProfile]);
 
   const getFirstName = (fullName?: string) => {
     return fullName?.split(' ')[0] || 'Colaborador';
@@ -62,7 +77,20 @@ export const CollaboratorHomeScreen = () => {
   }
 
   return (
-    <ScreenContainer scrollable edges={['left', 'right']}>
+    <ScreenContainer 
+      scrollable 
+      edges={['left', 'right']}
+      scrollViewProps={{
+        refreshControl: (
+          <RefreshControl 
+            refreshing={refreshing || (isLoading && requests.length > 0)} 
+            onRefresh={onRefresh}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
+        )
+      }}
+    >
       <View style={styles.container}>
         {user?.role && <ProfileTag role={user.role} />}
         {/* Greeting */}
