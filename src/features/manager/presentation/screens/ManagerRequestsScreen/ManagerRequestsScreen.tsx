@@ -47,18 +47,15 @@ export const ManagerRequestsScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      // Só busca se não tiver dados (primeira carga)
-      // Após aprovação/rejeição, os dados já estão atualizados no store
-      if (requests.length === 0) {
-        fetchRequests(activeFilter, true);
-      }
+      // Sempre atualiza quando a tela é focada
+      fetchRequests(activeFilter, true);
       subscribeToRealtime();
       
       return () => {
         // We don't unsubscribe on blur to keep updates coming if we go to details
         // But we should consider if we want to unsubscribe when leaving the stack
       };
-    }, [requests.length, fetchRequests, activeFilter, subscribeToRealtime])
+    }, [fetchRequests, activeFilter, subscribeToRealtime])
   );
 
   const [refreshing, setRefreshing] = useState(false);
