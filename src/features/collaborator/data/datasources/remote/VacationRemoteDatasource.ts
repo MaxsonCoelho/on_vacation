@@ -53,7 +53,6 @@ export const createRequestRemote = async (
     throw new Error('Missing required fields');
   }
 
-  const now = new Date().toISOString();
   const requestId = request.id || generateUUID();
   
   // Verificação de idempotência para sync
@@ -85,26 +84,10 @@ export const createRequestRemote = async (
     .select();
 
   if (insertError) {
-    // Trata erro de duplicata como sucesso (idempotência)
     if (insertError.code === '23505' || insertError.message?.includes('duplicate key')) {
       return;
     }
     console.error('[VacationRemoteDatasource] Error creating vacation request:', insertError);
     throw new Error(insertError.message);
-  }
-
-  const { data: historyData, error: historyError } = await supabase
-    .from('vacation_status_history')
-    .insert({
-      request_id: requestId,
-      status: request.status || 'pending',
-      label: 'Solicitada',
-      notes: request.collaboratorNotes || null,
-      created_at: now
-    })
-    .select();
-
-  if (historyError) {
-    // Silent fail - histórico não é crítico
   }
 };

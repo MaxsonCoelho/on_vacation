@@ -30,7 +30,6 @@ export const VacationHistoryScreen = () => {
   const { user } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Subscribe to realtime updates
   useEffect(() => {
     if (user?.id) {
       subscribeToRealtime(user.id);
