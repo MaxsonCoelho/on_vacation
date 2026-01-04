@@ -27,9 +27,7 @@ export const getRequestsRemote = async (userId: string): Promise<VacationRequest
     throw new Error(error.message);
   }
 
-  // Map DB columns to Entity
   return (data as VacationRequestDB[]).map((item) => {
-    // Manually parse date string to avoid timezone issues
     const [startYear, startMonth, startDay] = item.start_date.split('-');
     const [endYear, endMonth, endDay] = item.end_date.split('-');
     
@@ -58,7 +56,7 @@ export const createRequestRemote = async (
   const now = new Date().toISOString();
   const requestId = request.id || generateUUID();
   
-  // Verificar se a solicitação já existe (idempotência para sync)
+  // Verificação de idempotência para sync
   if (requestId) {
     const { data: existingRequest, error: checkError } = await supabase
       .from('vacation_requests')
@@ -66,9 +64,8 @@ export const createRequestRemote = async (
       .eq('id', requestId)
       .single();
 
-    // Se já existe, considera como sucesso (idempotência)
     if (existingRequest && !checkError) {
-      return; // Solicitação já existe, não precisa criar novamente
+      return;
     }
   }
   
@@ -76,28 +73,26 @@ export const createRequestRemote = async (
     id: requestId,
     user_id: request.userId,
     title: request.title,
-    start_date: new Date(request.startDate.split('/').reverse().join('-')), // Convert DD/MM/YYYY to YYYY-MM-DD
+    start_date: new Date(request.startDate.split('/').reverse().join('-')),
     end_date: new Date(request.endDate.split('/').reverse().join('-')),
     collaborator_notes: request.collaboratorNotes,
     status: request.status || 'pending',
   };
 
-  // 1. Criar solicitação na tabela vacation_requests
   const { data: insertData, error: insertError } = await supabase
     .from('vacation_requests')
     .insert(payload)
     .select();
 
   if (insertError) {
-    // Se o erro é de duplicata, trata como sucesso (idempotência)
+    // Trata erro de duplicata como sucesso (idempotência)
     if (insertError.code === '23505' || insertError.message?.includes('duplicate key')) {
-      return; // Já existe, considera sucesso
+      return;
     }
     console.error('[VacationRemoteDatasource] Error creating vacation request:', insertError);
     throw new Error(insertError.message);
   }
 
-  // 2. Criar registro inicial no histórico de status
   const { data: historyData, error: historyError } = await supabase
     .from('vacation_status_history')
     .insert({
@@ -110,7 +105,6 @@ export const createRequestRemote = async (
     .select();
 
   if (historyError) {
-    // Log o erro mas não falha a operação principal se o histórico falhar
-    // Silent fail - status history is non-critical
+    // Silent fail - histórico não é crítico
   }
 };

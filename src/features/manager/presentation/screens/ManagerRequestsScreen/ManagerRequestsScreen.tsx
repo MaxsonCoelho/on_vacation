@@ -37,24 +37,17 @@ export const ManagerRequestsScreen = () => {
     unsubscribeFromRealtime 
   } = useManagerStore();
 
-  // Fetch quando o filtro muda
   React.useEffect(() => {
     if (activeFilter !== lastFilter) {
-      fetchRequests(activeFilter, true); // Reset when filter changes
+      fetchRequests(activeFilter, true);
       setLastFilter(activeFilter);
     }
   }, [activeFilter, lastFilter, fetchRequests]);
 
   useFocusEffect(
     useCallback(() => {
-      // Sempre atualiza quando a tela é focada
       fetchRequests(activeFilter, true);
       subscribeToRealtime();
-      
-      return () => {
-        // We don't unsubscribe on blur to keep updates coming if we go to details
-        // But we should consider if we want to unsubscribe when leaving the stack
-      };
     }, [fetchRequests, activeFilter, subscribeToRealtime])
   );
 
@@ -69,13 +62,12 @@ export const ManagerRequestsScreen = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await fetchRequests(activeFilter, true); // Reset e recarrega do início
+      await fetchRequests(activeFilter, true);
     } finally {
       setRefreshing(false);
     }
   }, [activeFilter, fetchRequests]);
   
-  // Also use useEffect for mounting/unmounting
   React.useEffect(() => {
       return () => {
           unsubscribeFromRealtime();

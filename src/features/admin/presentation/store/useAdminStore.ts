@@ -88,7 +88,6 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     approveUser: async (userId: string) => {
       set({ isLoading: true, error: null });
       
-      // Salva estado inicial para verificar se funcionou
       const initialPendingUsers = get().pendingUsers;
       const userWasPending = initialPendingUsers.find(u => u.id === userId);
       
@@ -96,11 +95,9 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         const approve = approveUserUseCase(AdminRepositoryImpl);
         await approve(userId);
         
-        // Atualiza estado local
         const currentPendingUsers = get().pendingUsers;
         const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
         
-        // Busca o usuário aprovado localmente para adicionar à lista de usuários ativos
         const { getUsersLocal } = await import('../../data/datasources/local/AdminLocalDataSource');
         const localUsers = await getUsersLocal();
         const approvedUser = localUsers.find(u => u.id === userId);
@@ -108,7 +105,6 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         const currentUsers = get().users;
         let updatedUsers = currentUsers;
         
-        // Se encontrou o usuário aprovado localmente, adiciona à lista (evita duplicatas)
         if (approvedUser) {
           const userExists = currentUsers.find(u => u.id === userId);
           if (!userExists) {
@@ -122,25 +118,20 @@ export const useAdminStore = create<AdminState>((set, get) => ({
           isLoading: false 
         });
         
-        // Atualiza relatórios (sem lançar erro se falhar)
-        get().fetchReports(false).catch(() => {
-          // Silent fail - will retry later
-        });
+        get().fetchReports(false).catch(() => {});
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         
-        // Verifica se funcionou localmente (usuário foi removido de pending ou está em users)
+        // Verifica se funcionou localmente apesar do erro (para operações offline)
         const { getUsersLocal } = await import('../../data/datasources/local/AdminLocalDataSource');
         const localUsers = await getUsersLocal();
         const approvedUserLocal = localUsers.find(u => u.id === userId);
         const currentPendingUsers = get().pendingUsers;
         const userStillPending = currentPendingUsers.find(u => u.id === userId);
         
-        // Se o usuário foi aprovado localmente (está em users ou não está mais em pending), funcionou
         const workedLocally = approvedUserLocal || (!userStillPending && userWasPending);
         
         if (workedLocally) {
-          // Funcionou localmente - atualiza estado e não lança erro
           const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
           const currentUsers = get().users;
           let updatedUsers = currentUsers;
@@ -158,7 +149,6 @@ export const useAdminStore = create<AdminState>((set, get) => ({
             isLoading: false 
           });
         } else {
-          // Realmente falhou - lança erro
           console.error('[AdminStore] Error approving user:', errorMessage);
           set({ error: errorMessage, isLoading: false });
           throw error;
@@ -169,7 +159,6 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   rejectUser: async (userId: string) => {
     set({ isLoading: true, error: null });
     
-    // Salva estado inicial para verificar se funcionou
     const initialPendingUsers = get().pendingUsers;
     const userWasPending = initialPendingUsers.find(u => u.id === userId);
     
@@ -177,31 +166,24 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       const reject = rejectUserUseCase(AdminRepositoryImpl);
       await reject(userId);
       
-      // Atualiza estado local
       const currentPendingUsers = get().pendingUsers;
       const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
       set({ pendingUsers: updatedPendingUsers, isLoading: false });
       
-      // Atualiza relatórios (sem lançar erro se falhar)
-      get().fetchReports(false).catch(() => {
-        // Silent fail - will retry later
-      });
+      get().fetchReports(false).catch(() => {});
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
-      // Verifica se funcionou localmente (usuário foi removido de pending)
+      // Verifica se funcionou localmente apesar do erro (para operações offline)
       const currentPendingUsers = get().pendingUsers;
       const userStillPending = currentPendingUsers.find(u => u.id === userId);
       
-      // Se o usuário foi removido de pending, funcionou localmente
       const workedLocally = !userStillPending && userWasPending;
       
       if (workedLocally) {
-        // Funcionou localmente - atualiza estado e não lança erro
         const updatedPendingUsers = currentPendingUsers.filter(u => u.id !== userId);
         set({ pendingUsers: updatedPendingUsers, isLoading: false });
       } else {
-        // Realmente falhou - lança erro
         console.error('[AdminStore] Error rejecting user:', errorMessage);
         set({ error: errorMessage, isLoading: false });
         throw error;
@@ -215,17 +197,13 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       const updateStatus = updateUserStatusUseCase(AdminRepositoryImpl);
       await updateStatus(userId, status);
       
-      // Atualiza estado local
       const currentUsers = get().users;
       const updatedUsers = currentUsers.map(u => 
         u.id === userId ? { ...u, status } : u
       );
       set({ users: updatedUsers, isLoading: false });
       
-      // Atualiza relatórios (sem lançar erro se falhar)
-      get().fetchReports(false).catch(() => {
-        // Silent fail - will retry later
-      });
+      get().fetchReports(false).catch(() => {});
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('[AdminStore] Error updating user status:', errorMessage);

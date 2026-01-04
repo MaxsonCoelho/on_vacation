@@ -27,7 +27,6 @@ export const useVacationStore = create<VacationState>((set, get) => ({
   subscribersCount: 0,
 
   fetchRequests: async (userId: string) => {
-    // Only show loading on initial empty state to avoid flickering
     if (get().requests.length === 0) {
         set({ isLoading: true, error: null });
     }
@@ -89,7 +88,6 @@ export const useVacationStore = create<VacationState>((set, get) => ({
       await create(request);
       
       set({ isLoading: false });
-      // Refresh requests after creation
       const getRequests = getVacationRequestsUseCase(VacationRepositoryImpl);
       const requests = await getRequests(request.userId);
       set({ requests });

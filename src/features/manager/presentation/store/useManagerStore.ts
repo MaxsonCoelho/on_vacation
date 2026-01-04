@@ -55,7 +55,6 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
   fetchRequests: async (filter?: string, reset: boolean = true) => {
     const { currentFilter } = get();
     
-    // Se o filtro mudou ou é reset, limpa e recarrega
     if (reset || filter !== currentFilter) {
       set({ isLoading: true, error: null, requests: [], hasMore: true, currentFilter: filter });
     } else {
@@ -103,7 +102,7 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
 
   subscribeToRealtime: () => {
       const { subscription, fetchRequests } = get();
-      if (subscription) return; // Already subscribed
+      if (subscription) return;
 
       const newSubscription = supabase
         .channel('public:vacation_requests')
@@ -112,7 +111,7 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
             { event: '*', schema: 'public', table: 'vacation_requests' }, 
             () => {
                 const { currentFilter } = get();
-                fetchRequests(currentFilter, false); // Refresh list without loading state
+                fetchRequests(currentFilter, false);
             }
         )
         .subscribe();
@@ -129,26 +128,21 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
   },
 
   approveRequest: async (requestId: string, notes?: string) => {
-    // Atualização otimista imediata para UI responsiva (especialmente offline)
     const currentRequests = get().requests;
     const updatedRequests = currentRequests.map(r => 
       r.id === requestId ? { ...r, status: 'approved' as const, managerNotes: notes } : r
     );
     set({ requests: updatedRequests, isLoading: false, error: null });
     
-    // Executa aprovação em background (não bloqueia UI)
     try {
       const approve = approveRequestUseCase(ManagerRepositoryImpl);
       await approve(requestId, notes);
       
-      // Se houver diferenças após sincronização, atualiza novamente
-      // (raramente necessário, mas garante consistência)
       const finalRequests = get().requests;
       if (finalRequests.find(r => r.id === requestId)?.status !== 'approved') {
         set({ requests: updatedRequests });
       }
     } catch (error) {
-      // Se falhar, reverte para estado anterior
       set({ requests: currentRequests });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       set({ error: errorMessage });
@@ -157,26 +151,21 @@ export const useManagerStore = create<ManagerState>((set, get) => ({
   },
 
   rejectRequest: async (requestId: string, notes?: string) => {
-    // Atualização otimista imediata para UI responsiva (especialmente offline)
     const currentRequests = get().requests;
     const updatedRequests = currentRequests.map(r => 
       r.id === requestId ? { ...r, status: 'rejected' as const, managerNotes: notes } : r
     );
     set({ requests: updatedRequests, isLoading: false, error: null });
     
-    // Executa rejeição em background (não bloqueia UI)
     try {
       const reject = rejectRequestUseCase(ManagerRepositoryImpl);
       await reject(requestId, notes);
       
-      // Se houver diferenças após sincronização, atualiza novamente
-      // (raramente necessário, mas garante consistência)
       const finalRequests = get().requests;
       if (finalRequests.find(r => r.id === requestId)?.status !== 'rejected') {
         set({ requests: updatedRequests });
       }
     } catch (error) {
-      // Se falhar, reverte para estado anterior
       set({ requests: currentRequests });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       set({ error: errorMessage });
