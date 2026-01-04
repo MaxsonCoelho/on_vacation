@@ -60,7 +60,7 @@ export const _test_resetDB = async () => {
     const db = await getDatabase();
     await db.execAsync('DELETE FROM vacation_requests');
     await db.execAsync('DELETE FROM sync_queue');
-  } catch (error) {
+  } catch {
     // Tables might not exist yet, which is fine
   }
 };
