@@ -89,7 +89,7 @@ export const FeedbackBottomSheet: React.FC<FeedbackBottomSheetProps> = ({
     return {
       transform: [{ translateY: translateY.value }],
     };
-  });
+  }, []);
 
   if (!visible) return null;
 

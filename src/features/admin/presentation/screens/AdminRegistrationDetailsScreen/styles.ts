@@ -52,6 +52,10 @@ export const styles = StyleSheet.create({
   infoLabel: {
     flex: 1,
   },
+  noAdditionalInfo: {
+    paddingVertical: theme.spacing.md,
+    fontStyle: 'italic',
+  },
   statusText: {
     marginTop: theme.spacing.xs,
   },

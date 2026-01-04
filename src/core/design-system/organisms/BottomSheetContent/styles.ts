@@ -6,8 +6,8 @@ export const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderTopLeftRadius: theme.radius.lg,
     borderTopRightRadius: theme.radius.lg,
-    paddingBottom: theme.spacing.xl, // Extra padding for safe area
     width: '100%',
+    maxHeight: '90%',
     ...theme.shadows.lg,
   },
   handleContainer: {
@@ -27,5 +27,6 @@ export const styles = StyleSheet.create({
     elevation: 0,
     padding: 0, // Reset padding as we might handle it in container
     paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
   },
 });

@@ -5,6 +5,8 @@ export interface UserProfile {
   avatar?: string;
   role: 'Gestor' | 'Administrador' | 'Colaborador';
   department: string;
+  position?: string;
+  phone?: string;
   admissionDate: string;
   vacationBalance: number;
   vacationPeriodStart: string;

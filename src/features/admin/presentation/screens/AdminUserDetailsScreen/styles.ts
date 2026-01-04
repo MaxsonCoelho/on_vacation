@@ -36,15 +36,22 @@ export const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: theme.colors.border.default,
-    marginVertical: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.default,
   },
   infoLabel: {
     flex: 1,
+  },
+  noAdditionalInfo: {
+    paddingVertical: theme.spacing.md,
+    fontStyle: 'italic',
   },
   actionButton: {
     width: '100%',

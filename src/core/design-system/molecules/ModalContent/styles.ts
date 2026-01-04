@@ -18,5 +18,7 @@ export const styles = StyleSheet.create({
   actions: {
     flexDirection: 'column',
     gap: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
   },
 });

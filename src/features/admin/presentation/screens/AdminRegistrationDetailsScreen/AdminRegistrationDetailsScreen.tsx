@@ -146,38 +146,46 @@ export const AdminRegistrationDetailsScreen = () => {
           </Text>
           <View style={styles.separator} />
           
-            {route.params?.department && (
-              <View style={styles.infoRow}>
-                <Text variant="body" color="text.secondary" style={styles.infoLabel}>
-                  Departamento
-                </Text>
-                <Text variant="body" weight="bold">
-                  {route.params.department}
-                </Text>
-              </View>
-            )}
+          {route.params?.department || route.params?.position || route.params?.phone ? (
+            <>
+              {route.params?.department && (
+                <View style={styles.infoRow}>
+                  <Text variant="body" color="text.secondary" style={styles.infoLabel}>
+                    Departamento
+                  </Text>
+                  <Text variant="caption" weight="bold">
+                    {route.params.department}
+                  </Text>
+                </View>
+              )}
 
-            {route.params?.position && (
-              <View style={styles.infoRow}>
-                <Text variant="body" color="text.secondary" style={styles.infoLabel}>
-                  Cargo
-                </Text>
-                <Text variant="body" weight="bold">
-                  {route.params.position}
-                </Text>
-              </View>
-            )}
+              {route.params?.position && (
+                <View style={styles.infoRow}>
+                  <Text variant="body" color="text.secondary" style={styles.infoLabel}>
+                    Cargo
+                  </Text>
+                  <Text variant="caption" weight="bold">
+                    {route.params.position}
+                  </Text>
+                </View>
+              )}
 
-            {route.params?.phone && (
-              <View style={styles.infoRow}>
-                <Text variant="body" color="text.secondary" style={styles.infoLabel}>
-                  Telefone
-                </Text>
-                <Text variant="body" weight="bold">
-                  {route.params.phone}
-                </Text>
-              </View>
-            )}
+              {route.params?.phone && (
+                <View style={styles.infoRow}>
+                  <Text variant="body" color="text.secondary" style={styles.infoLabel}>
+                    Telefone
+                  </Text>
+                  <Text variant="caption" weight="bold">
+                    {route.params.phone}
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <Text variant="body" color="text.secondary" style={styles.noAdditionalInfo}>
+              Nenhuma informação adicional fornecida pelo usuário.
+            </Text>
+          )}
         </Card>
 
         <Spacer size="lg" />
@@ -188,7 +196,7 @@ export const AdminRegistrationDetailsScreen = () => {
             Status do cadastro
           </Text>
           <View style={styles.separator} />
-            <Text variant="body" style={styles.statusText}>
+            <Text variant="caption" style={styles.statusText}>
               Pendente de aprovação
             </Text>
         </Card>

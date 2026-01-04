@@ -9,6 +9,9 @@ export const authRepository: AuthRepository = {
         await Local.saveUserSession(user);
         return user;
     },
+    register: async (email, password, name, role, department, position, phone) => {
+        await Remote.registerRemote(email, password, name, role, department, position, phone);
+    },
     logout: async () => {
         try {
             await Remote.logoutRemote();

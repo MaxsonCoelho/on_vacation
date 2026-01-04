@@ -5,4 +5,6 @@ export interface Manager {
   avatarUrl?: string;
   role: 'manager';
   department: string;
+  position?: string;
+  phone?: string;
 }

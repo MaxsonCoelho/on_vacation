@@ -22,29 +22,27 @@ export const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   description: {
+    marginBottom: theme.spacing.lg,
+  },
+  approvalNotice: {
     marginBottom: theme.spacing.xl,
   },
   form: {
     gap: theme.spacing.md,
   },
-  forgotPasswordContainer: {
+  loginLinkContainer: {
     alignItems: 'center',
     marginTop: theme.spacing.md,
   },
-  forgotPasswordText: {
+  loginLinkText: {
     textDecorationLine: 'underline',
   },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: theme.spacing.md,
+  sectionTitle: {
+    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.xs,
   },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  dividerText: {
-    marginHorizontal: theme.spacing.md,
+  sectionDescription: {
+    marginBottom: theme.spacing.xs,
   },
 });
+

@@ -26,7 +26,9 @@ export const getProfileRemote = async (userId: string): Promise<UserProfile> => 
     name: data.name,
     avatar: data.avatar_url,
     role: data.role,
-    department: data.department || 'Tecnologia', 
+    department: data.department || 'Tecnologia',
+    position: data.position || undefined,
+    phone: data.phone || undefined,
     admissionDate: formattedAdmissionDate,
     vacationBalance: 15, // Mocked logic
     vacationPeriodStart: '01/01/2023',

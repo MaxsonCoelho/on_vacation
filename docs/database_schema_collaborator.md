@@ -38,6 +38,9 @@ Estende a tabela `auth.users` do Supabase com informações específicas da apli
 | `avatar_url` | `text` | URL da imagem de perfil. | |
 | `role` | `text` | Papel do usuário no sistema. | Check: 'Gestor', 'Administrador', 'Colaborador' |
 | `status` | `text` | Status da conta. | Check: 'active', 'pending', 'inactive'. Default: 'pending' |
+| `department` | `text` | Departamento do usuário. | Opcional |
+| `position` | `text` | Cargo/Posição do usuário. | Opcional |
+| `phone` | `text` | Telefone do usuário. | Opcional |
 | `created_at` | `timestamptz` | Data de criação do perfil. | Default: `now()` |
 | `updated_at` | `timestamptz` | Data da última atualização. | Default: `now()` |
 

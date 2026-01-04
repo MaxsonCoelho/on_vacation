@@ -56,3 +56,89 @@ export const logoutRemote = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
 };
+
+export const registerRemote = async (
+    email: string,
+    password: string,
+    name: string,
+    role: 'Colaborador' | 'Gestor' | 'Administrador',
+    department?: string,
+    position?: string,
+    phone?: string
+): Promise<void> => {
+    // 1. Criar usuário no Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: {
+                name,
+            },
+        },
+    });
+
+    if (authError) throw authError;
+    if (!authData.user) throw new Error('Falha ao criar usuário');
+
+    // 2. Criar profile no Supabase com status 'pending'
+    // O profile pode ser criado automaticamente via trigger, mas garantimos que esteja correto
+    const profileData: {
+        id: string;
+        email: string;
+        name: string;
+        role: string;
+        status: string;
+        created_at: string;
+        department?: string;
+        position?: string;
+        phone?: string;
+    } = {
+        id: authData.user.id,
+        email: email,
+        name: name,
+        role: role,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+    };
+
+    if (department) profileData.department = department;
+    if (position) profileData.position = position;
+    if (phone) profileData.phone = phone;
+
+    const { error: profileError } = await supabase
+        .from('profiles')
+        .insert(profileData);
+
+    if (profileError) {
+        // Se o erro for de duplicata (profile já existe via trigger), tenta atualizar
+        if (profileError.code === '23505') {
+            const updateData: {
+                email: string;
+                name: string;
+                role: string;
+                status: string;
+                department?: string;
+                position?: string;
+                phone?: string;
+            } = {
+                email: email,
+                name: name,
+                role: role,
+                status: 'pending',
+            };
+
+            if (department) updateData.department = department;
+            if (position) updateData.position = position;
+            if (phone) updateData.phone = phone;
+
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update(updateData)
+                .eq('id', authData.user.id);
+
+            if (updateError) throw updateError;
+        } else {
+            throw profileError;
+        }
+    }
+};

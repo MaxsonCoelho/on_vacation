@@ -26,6 +26,9 @@ type RouteProp = {
     role: string;
     status: string;
     createdAt: string;
+    department?: string;
+    position?: string;
+    phone?: string;
   };
 };
 
@@ -166,12 +169,13 @@ export const AdminUserDetailsScreen = () => {
           <Text variant="h3" weight="bold" style={styles.sectionTitle}>
             Informações
           </Text>
+          <View style={styles.separator} />
           
           <View style={styles.infoRow}>
             <Text variant="body" color="text.secondary" style={styles.infoLabel}>
               Perfil
             </Text>
-            <Text variant="body" weight="bold">
+            <Text variant="caption" weight="bold">
               {role}
             </Text>
           </View>
@@ -182,7 +186,7 @@ export const AdminUserDetailsScreen = () => {
             <Text variant="body" color="text.secondary" style={styles.infoLabel}>
               Status
             </Text>
-            <Text variant="body" weight="bold">
+            <Text variant="caption" weight="bold">
               {status}
             </Text>
           </View>
@@ -193,10 +197,61 @@ export const AdminUserDetailsScreen = () => {
             <Text variant="body" color="text.secondary" style={styles.infoLabel}>
               Criado em
             </Text>
-            <Text variant="body" weight="bold">
+            <Text variant="caption" weight="bold">
               {createdAt}
             </Text>
           </View>
+        </Card>
+
+        <Spacer size="lg" />
+
+        {/* Informações adicionais */}
+        <Card style={styles.infoCard} padding="md">
+          <Text variant="h3" weight="bold" style={styles.sectionTitle}>
+            Informações adicionais
+          </Text>
+          <View style={styles.separator} />
+          
+          {route.params?.department || route.params?.position || route.params?.phone ? (
+            <>
+              {route.params?.department && (
+                <View style={styles.infoRow}>
+                  <Text variant="body" color="text.secondary" style={styles.infoLabel}>
+                    Departamento
+                  </Text>
+                  <Text variant="caption" weight="bold">
+                    {route.params.department}
+                  </Text>
+                </View>
+              )}
+
+              {route.params?.position && (
+                <View style={styles.infoRow}>
+                  <Text variant="body" color="text.secondary" style={styles.infoLabel}>
+                    Cargo
+                  </Text>
+                  <Text variant="caption" weight="bold">
+                    {route.params.position}
+                  </Text>
+                </View>
+              )}
+
+              {route.params?.phone && (
+                <View style={styles.infoRow}>
+                  <Text variant="body" color="text.secondary" style={styles.infoLabel}>
+                    Telefone
+                  </Text>
+                  <Text variant="caption" weight="bold">
+                    {route.params.phone}
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <Text variant="body" color="text.secondary" style={styles.noAdditionalInfo}>
+              Nenhuma informação adicional fornecida pelo usuário.
+            </Text>
+          )}
         </Card>
 
         <Spacer size="lg" />

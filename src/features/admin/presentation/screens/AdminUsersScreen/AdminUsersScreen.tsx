@@ -170,6 +170,9 @@ export const AdminUsersScreen = () => {
                     role: item.role,
                     status: item.status === 'active' ? 'Ativo' : 'Inativo',
                     createdAt: formattedDate || 'Data não disponível',
+                    department: item.department,
+                    position: item.position,
+                    phone: item.phone,
                   })}
                 />
               );

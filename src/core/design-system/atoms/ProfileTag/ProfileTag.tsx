@@ -182,7 +182,13 @@ export const ProfileTag: React.FC<ProfileTagProps> = ({ role }) => {
       <Text
         variant="caption"
         weight="bold"
-        style={[styles.label, { color: theme.colors.text.inverse }]}
+        style={[
+          styles.label, 
+          { 
+            color: theme.colors.text.inverse,
+            fontSize: theme.typography.fontSize.caption * 0.9,
+          }
+        ]}
       >
         {config.label}
       </Text>

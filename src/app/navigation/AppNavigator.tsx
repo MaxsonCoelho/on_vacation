@@ -6,6 +6,7 @@ import { useAuthStore } from '../../features/auth/presentation/store/useAuthStor
 import { 
   RoleSelectionScreen, 
   LoginScreen, 
+  RegisterScreen,
   ForgotPasswordScreen 
 } from '../../features/auth/presentation/screens';
 import { ManagerNavigator } from './manager/ManagerNavigator';
@@ -73,6 +74,10 @@ export const AppNavigator: React.FC = () => {
             <Stack.Screen 
               name="Login" 
               component={LoginScreen} 
+            />
+            <Stack.Screen 
+              name="Register" 
+              component={RegisterScreen} 
             />
             <Stack.Screen 
               name="ForgotPassword" 

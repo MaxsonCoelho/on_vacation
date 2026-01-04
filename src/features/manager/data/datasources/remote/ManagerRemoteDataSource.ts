@@ -20,7 +20,9 @@ export const getProfileRemote = async (userId: string): Promise<Manager> => {
     email: data.email,
     avatarUrl: data.avatar_url,
     role: data.role,
-    department: data.department || 'General'
+    department: data.department || 'General',
+    position: data.position || undefined,
+    phone: data.phone || undefined,
   };
 };
 

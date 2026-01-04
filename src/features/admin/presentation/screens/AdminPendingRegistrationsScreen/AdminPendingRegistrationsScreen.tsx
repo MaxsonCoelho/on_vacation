@@ -96,6 +96,9 @@ export const AdminPendingRegistrationsScreen = () => {
                   email: item.email,
                   role: item.role,
                   registrationDate: formatDate(item.createdAt),
+                  department: item.department,
+                  position: item.position,
+                  phone: item.phone,
                 })}
               />
             )}

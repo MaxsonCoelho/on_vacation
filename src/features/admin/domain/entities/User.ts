@@ -6,5 +6,8 @@ export interface User {
   status: 'active' | 'pending' | 'inactive';
   createdAt: string;
   avatarUrl?: string;
+  department?: string;
+  position?: string;
+  phone?: string;
 }
 

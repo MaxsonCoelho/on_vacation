@@ -74,7 +74,7 @@ export const ManagerHomeScreen = () => {
         {user?.role && <ProfileTag role={user.role} />}
         {/* Saudação */}
         <View style={styles.greeting}>
-          <Text variant="h1" weight="bold">
+          <Text variant="h2" weight="bold">
             Olá, {profile?.name || 'Gestor'}
           </Text>
         </View>

@@ -76,6 +76,29 @@ export const ProfileScreen = () => {
           <Text variant="body" style={{ fontSize: RFValue(12) }}>{admissionDate}</Text>
         </View>
       </ListSection>
+
+      {(userDisplay.position || userDisplay.phone) && (
+        <>
+          <Spacer size="lg" />
+          <ListSection title="Informações Adicionais">
+            {userDisplay.position && (
+              <>
+                <View style={styles.infoRow}>
+                  <Text variant="body" color="text.secondary">Cargo</Text>
+                  <Text variant="caption" style={{ fontSize: RFValue(11) }}>{userDisplay.position}</Text>
+                </View>
+                {userDisplay.phone && <Spacer size="sm" />}
+              </>
+            )}
+            {userDisplay.phone && (
+              <View style={styles.infoRow}>
+                <Text variant="body" color="text.secondary">Telefone</Text>
+                <Text variant="caption" style={{ fontSize: RFValue(11) }}>{userDisplay.phone}</Text>
+              </View>
+            )}
+          </ListSection>
+        </>
+      )}
     </ScreenContainer>
   );
 };

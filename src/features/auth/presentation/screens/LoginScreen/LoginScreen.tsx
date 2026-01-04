@@ -125,6 +125,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ route, navigation }) =
               Esqueceu sua senha?
             </Text>
           </TouchableOpacity>
+
+          <Spacer size="lg" />
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text variant="caption" color="text.secondary" style={styles.dividerText}>
+              ou
+            </Text>
+            <View style={styles.divider} />
+          </View>
+
+          <Spacer size="md" />
+
+          <Button
+            title="Criar meu cadastro"
+            onPress={() => navigation.navigate('Register', { role })}
+            variant="outline"
+          />
         </View>
       </View>
 

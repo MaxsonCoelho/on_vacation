@@ -12,6 +12,9 @@ export type AdminUsersStackParamList = {
     role: string;
     status: string;
     createdAt: string;
+    department?: string;
+    position?: string;
+    phone?: string;
   };
   UserRequests: {
     userId: string;

@@ -31,6 +31,9 @@ export const ManagerProfileScreen = () => {
     role: profile?.role ? 'Gestor' : 'Gestor', // Force 'Gestor' display
     email: profile?.email || '',
     avatar: profile?.avatarUrl,
+    department: profile?.department,
+    position: profile?.position,
+    phone: profile?.phone,
   };
 
   return (
@@ -47,7 +50,39 @@ export const ManagerProfileScreen = () => {
           <Text variant="body" color="text.secondary">E-mail</Text>
           <Text variant="body">{userDisplay.email}</Text>
         </View>
+        {userDisplay.department && (
+          <>
+            <Spacer size="sm" />
+            <View style={styles.infoRow}>
+              <Text variant="body" color="text.secondary">Departamento</Text>
+              <Text variant="body">{userDisplay.department}</Text>
+            </View>
+          </>
+        )}
       </ListSection>
+
+      {(userDisplay.position || userDisplay.phone) && (
+        <>
+          <Spacer size="lg" />
+          <ListSection title="Informações Adicionais">
+            {userDisplay.position && (
+              <>
+                <View style={styles.infoRow}>
+                  <Text variant="body" color="text.secondary">Cargo</Text>
+                  <Text variant="caption">{userDisplay.position}</Text>
+                </View>
+                {userDisplay.phone && <Spacer size="sm" />}
+              </>
+            )}
+            {userDisplay.phone && (
+              <View style={styles.infoRow}>
+                <Text variant="body" color="text.secondary">Telefone</Text>
+                <Text variant="caption">{userDisplay.phone}</Text>
+              </View>
+            )}
+          </ListSection>
+        </>
+      )}
     </ScreenContainer>
   );
 };

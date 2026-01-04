@@ -95,7 +95,7 @@ export const CollaboratorHomeScreen = () => {
         {user?.role && <ProfileTag role={user.role} />}
         {/* Greeting */}
         <View style={styles.greeting}>
-          <Text variant="h1" weight="bold">
+          <Text variant="h2" weight="bold">
             Olá, {getFirstName(profile?.name || user?.name)}
           </Text>
         </View>

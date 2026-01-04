@@ -112,7 +112,7 @@ export const getReportsRemote = async (): Promise<AdminReports> => {
 export const getPendingUsersRemote = async (): Promise<PendingUser[]> => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, name, email, role, status, created_at')
+    .select('id, name, email, role, status, created_at, department, position, phone')
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
 
@@ -128,13 +128,16 @@ export const getPendingUsersRemote = async (): Promise<PendingUser[]> => {
     role: profile.role,
     status: 'pending' as const,
     createdAt: profile.created_at,
+    department: profile.department,
+    position: profile.position,
+    phone: profile.phone,
   }));
 };
 
 export const getUsersRemote = async (filter?: string): Promise<User[]> => {
   let query = supabase
     .from('profiles')
-    .select('id, name, email, role, status, created_at, avatar_url')
+    .select('id, name, email, role, status, created_at, avatar_url, department, position, phone')
     .eq('status', 'active'); // Apenas usuários ativos
 
   // Aplicar filtro de role se fornecido
@@ -165,6 +168,9 @@ export const getUsersRemote = async (filter?: string): Promise<User[]> => {
     status: profile.status as 'active' | 'pending' | 'inactive',
     createdAt: profile.created_at,
     avatarUrl: profile.avatar_url,
+    department: profile.department,
+    position: profile.position,
+    phone: profile.phone,
   }));
 };
 
