@@ -14,10 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.maxson-uppo.on-vacation",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+      "bundleIdentifier": "com.maxson-uppo.on-vacation"
     },
     "android": {
       "adaptiveIcon": {
@@ -37,6 +34,8 @@
       "expo-sqlite"
     ],
     "extra": {
+      "EXPO_PUBLIC_SUPABASE_URL": "https://milbmtxprwlgrtizrxwg.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_jZLKUowm3a2ltI2mZLN3Hw_ELsi4mPZ",
       "eas": {
         "projectId": "fe6b04f5-3b35-4256-a480-5a928d9530cc"
       }
