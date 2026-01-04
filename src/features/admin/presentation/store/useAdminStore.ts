@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { AdminReports } from '../../domain/entities/AdminReports';
 import { PendingUser } from '../../domain/entities/PendingUser';
 import { User } from '../../domain/entities/User';
+import { TeamRequest } from '../../../manager/domain/entities/TeamRequest';
 import { AdminRepositoryImpl } from '../../data/repositories/AdminRepositoryImpl';
 import { getAdminReportsUseCase } from '../../domain/useCases/GetAdminReportsUseCase';
 import { getPendingUsersUseCase } from '../../domain/useCases/GetPendingUsersUseCase';
@@ -9,6 +10,9 @@ import { getUsersUseCase } from '../../domain/useCases/GetUsersUseCase';
 import { approveUserUseCase } from '../../domain/useCases/ApproveUserUseCase';
 import { rejectUserUseCase } from '../../domain/useCases/RejectUserUseCase';
 import { updateUserStatusUseCase } from '../../domain/useCases/UpdateUserStatusUseCase';
+import { getUserRequestsUseCase } from '../../domain/useCases/GetUserRequestsUseCase';
+import { approveRequestUseCase } from '../../domain/useCases/ApproveRequestUseCase';
+import { rejectRequestUseCase } from '../../domain/useCases/RejectRequestUseCase';
 import { supabase } from '../../../../core/services/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -16,6 +20,7 @@ interface AdminState {
   reports: AdminReports | null;
   pendingUsers: PendingUser[];
   users: User[];
+  userRequests: TeamRequest[];
   isLoading: boolean;
   error: string | null;
   subscription: RealtimeChannel | null;
@@ -24,9 +29,12 @@ interface AdminState {
   fetchReports: (showLoading?: boolean) => Promise<void>;
   fetchPendingUsers: (showLoading?: boolean) => Promise<void>;
   fetchUsers: (filter?: string, showLoading?: boolean) => Promise<void>;
+  fetchUserRequests: (userId: string, filter?: string, showLoading?: boolean) => Promise<void>;
   approveUser: (userId: string) => Promise<void>;
   rejectUser: (userId: string) => Promise<void>;
   updateUserStatus: (userId: string, status: 'active' | 'inactive') => Promise<void>;
+  approveRequest: (requestId: string, notes?: string) => Promise<void>;
+  rejectRequest: (requestId: string, notes?: string) => Promise<void>;
   subscribeToRealtime: () => void;
   unsubscribeFromRealtime: () => void;
 }
@@ -35,6 +43,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   reports: null,
   pendingUsers: [],
   users: [],
+  userRequests: [],
   isLoading: false,
   error: null,
   subscription: null,
@@ -209,6 +218,105 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       console.error('[AdminStore] Error updating user status:', errorMessage);
       set({ error: errorMessage, isLoading: false });
       throw error;
+    }
+  },
+
+  fetchUserRequests: async (userId: string, filter?: string, showLoading = true) => {
+    if (showLoading) {
+      set({ isLoading: true, error: null });
+    }
+    
+    try {
+      const getUserRequests = getUserRequestsUseCase(AdminRepositoryImpl);
+      const requests = await getUserRequests(userId, filter);
+      set({ userRequests: requests, isLoading: false });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      set({ error: errorMessage, isLoading: false });
+    }
+  },
+
+  approveRequest: async (requestId: string, notes?: string) => {
+    const currentRequests = get().userRequests;
+    
+    set({ isLoading: true, error: null });
+    
+    const initialRequest = currentRequests.find(r => r.id === requestId);
+    
+    try {
+      const approve = approveRequestUseCase(AdminRepositoryImpl);
+      await approve(requestId, notes);
+      
+      const updatedRequests = currentRequests.map(req =>
+        req.id === requestId
+          ? { ...req, status: 'approved' as const, updatedAt: new Date().toISOString() }
+          : req
+      );
+      
+      set({ userRequests: updatedRequests, isLoading: false });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      const { getUserRequestsLocal } = await import('../../data/datasources/local/AdminLocalDataSource');
+      const localRequests = await getUserRequestsLocal(initialRequest?.employeeId || '', undefined);
+      const localRequest = localRequests.find(r => r.id === requestId);
+      
+      const workedLocally = localRequest?.status === 'approved';
+      
+      if (workedLocally) {
+        const updatedRequests = currentRequests.map(req =>
+          req.id === requestId
+            ? { ...req, status: 'approved' as const, updatedAt: new Date().toISOString() }
+            : req
+        );
+        set({ userRequests: updatedRequests, isLoading: false });
+      } else {
+        console.error('[AdminStore] Error approving request:', errorMessage);
+        set({ error: errorMessage, isLoading: false });
+        throw error;
+      }
+    }
+  },
+
+  rejectRequest: async (requestId: string, notes?: string) => {
+    const currentRequests = get().userRequests;
+    
+    set({ isLoading: true, error: null });
+    
+    const initialRequest = currentRequests.find(r => r.id === requestId);
+    
+    try {
+      const reject = rejectRequestUseCase(AdminRepositoryImpl);
+      await reject(requestId, notes);
+      
+      const updatedRequests = currentRequests.map(req =>
+        req.id === requestId
+          ? { ...req, status: 'rejected' as const, updatedAt: new Date().toISOString() }
+          : req
+      );
+      
+      set({ userRequests: updatedRequests, isLoading: false });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      const { getUserRequestsLocal } = await import('../../data/datasources/local/AdminLocalDataSource');
+      const localRequests = await getUserRequestsLocal(initialRequest?.employeeId || '', undefined);
+      const localRequest = localRequests.find(r => r.id === requestId);
+      
+      const workedLocally = localRequest?.status === 'rejected';
+      
+      if (workedLocally) {
+        const updatedRequests = currentRequests.map(req =>
+          req.id === requestId
+            ? { ...req, status: 'rejected' as const, updatedAt: new Date().toISOString() }
+            : req
+        );
+        set({ userRequests: updatedRequests, isLoading: false });
+      } else {
+        console.error('[AdminStore] Error rejecting request:', errorMessage);
+        set({ error: errorMessage, isLoading: false });
+        throw error;
+      }
     }
   },
 

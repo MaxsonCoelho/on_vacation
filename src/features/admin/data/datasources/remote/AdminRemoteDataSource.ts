@@ -2,6 +2,7 @@ import { supabase } from '../../../../../core/services/supabase';
 import { AdminReports } from '../../../domain/entities/AdminReports';
 import { PendingUser } from '../../../domain/entities/PendingUser';
 import { User } from '../../../domain/entities/User';
+import { TeamRequest, RequestStatus } from '../../../manager/domain/entities/TeamRequest';
 
 // Helper para calcular estatísticas do mês atual
 const getCurrentMonthStart = () => {
@@ -208,6 +209,136 @@ export const updateUserStatusRemote = async (userId: string, status: 'active' | 
   if (error) {
     console.error('[AdminRemoteDataSource] Error updating user status:', error);
     throw error;
+  }
+};
+
+interface VacationRequestDB {
+  id: string;
+  user_id: string;
+  title: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  collaborator_notes?: string;
+  manager_notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getUserRequestsRemote = async (userId: string): Promise<TeamRequest[]> => {
+  const { data, error } = await supabase
+    .from('vacation_requests')
+    .select('*, profiles(name, avatar_url)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[AdminRemoteDataSource] Error fetching user requests:', error);
+    throw error;
+  }
+
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('id, name, avatar_url')
+    .eq('id', userId)
+    .single();
+
+  return (data as any[]).map((row) => {
+    let profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    
+    if (!profile || !profile.name) {
+      profile = profileData;
+    }
+    
+    return {
+      id: row.id,
+      employeeId: row.user_id,
+      title: row.title,
+      employeeName: profile?.name || 'Unknown',
+      employeeAvatarUrl: profile?.avatar_url,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      status: row.status as RequestStatus,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      notes: row.collaborator_notes
+    };
+  });
+};
+
+export const approveRequestRemote = async (requestId: string, notes?: string): Promise<void> => {
+  const now = new Date().toISOString();
+  
+  const { data: updateData, error: updateError } = await supabase
+    .from('vacation_requests')
+    .update({ 
+      status: 'approved', 
+      manager_notes: notes, 
+      updated_at: now 
+    })
+    .eq('id', requestId)
+    .select();
+
+  if (updateError) {
+    console.error('[AdminRemoteDataSource] Error updating vacation_requests:', updateError);
+    throw updateError;
+  }
+
+  if (!updateData || updateData.length === 0) {
+    const error = new Error(`No rows updated for request ${requestId}`);
+    console.error('[AdminRemoteDataSource]', error.message);
+    throw error;
+  }
+
+  const { error: historyError } = await supabase
+    .from('vacation_status_history')
+    .insert({
+      request_id: requestId,
+      status: 'approved',
+      label: 'Aprovada',
+      notes: notes || null,
+      created_at: now
+    });
+
+  if (historyError) {
+  }
+};
+
+export const rejectRequestRemote = async (requestId: string, notes?: string): Promise<void> => {
+  const now = new Date().toISOString();
+  
+  const { data: updateData, error: updateError } = await supabase
+    .from('vacation_requests')
+    .update({ 
+      status: 'rejected', 
+      manager_notes: notes, 
+      updated_at: now 
+    })
+    .eq('id', requestId)
+    .select();
+
+  if (updateError) {
+    console.error('[AdminRemoteDataSource] Error updating vacation_requests:', updateError);
+    throw updateError;
+  }
+
+  if (!updateData || updateData.length === 0) {
+    const error = new Error(`No rows updated for request ${requestId}`);
+    console.error('[AdminRemoteDataSource]', error.message);
+    throw error;
+  }
+
+  const { error: historyError } = await supabase
+    .from('vacation_status_history')
+    .insert({
+      request_id: requestId,
+      status: 'rejected',
+      label: 'Reprovada',
+      notes: notes || null,
+      created_at: now
+    });
+
+  if (historyError) {
   }
 };
 

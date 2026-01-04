@@ -6,4 +6,6 @@ export * from './SettingsScreen/SettingsScreen';
 export * from './AdminPendingRegistrationsScreen/AdminPendingRegistrationsScreen';
 export * from './AdminRegistrationDetailsScreen/AdminRegistrationDetailsScreen';
 export * from './AdminUserDetailsScreen/AdminUserDetailsScreen';
+export * from './AdminUserRequestsScreen/AdminUserRequestsScreen';
+export * from './AdminUserRequestAnalysisScreen/AdminUserRequestAnalysisScreen';
 

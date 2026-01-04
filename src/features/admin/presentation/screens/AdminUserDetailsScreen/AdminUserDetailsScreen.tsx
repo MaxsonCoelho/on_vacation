@@ -210,6 +210,15 @@ export const AdminUserDetailsScreen = () => {
           <Spacer size="md" />
           
           <Button
+            title="Solicitações"
+            onPress={() => navigation.navigate('UserRequests', { userId, userName: name })}
+            variant="outline"
+            style={styles.actionButton}
+          />
+          
+          <Spacer size="md" />
+          
+          <Button
             title="Alterar perfil"
             onPress={handleChangeProfile}
             variant="outline"

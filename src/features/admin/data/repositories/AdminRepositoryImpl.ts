@@ -2,6 +2,7 @@ import { AdminRepository } from '../../domain/repositories/AdminRepository';
 import { AdminReports } from '../../domain/entities/AdminReports';
 import { PendingUser } from '../../domain/entities/PendingUser';
 import { User } from '../../domain/entities/User';
+import { TeamRequest } from '../../../manager/domain/entities/TeamRequest';
 import * as Local from '../datasources/local/AdminLocalDataSource';
 import * as Remote from '../datasources/remote/AdminRemoteDataSource';
 import { SyncQueue } from '../../../../core/offline/queue/SyncQueue';
@@ -273,6 +274,61 @@ export const AdminRepositoryImpl: AdminRepository = {
       }
     } else {
       await SyncQueue.enqueue('UPDATE_USER_STATUS', { userId, status });
+    }
+  },
+
+  getUserRequests: async (userId: string, filter?: string): Promise<TeamRequest[]> => {
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (netState.isConnected && session) {
+      try {
+        const remoteRequests = await Remote.getUserRequestsRemote(userId);
+        
+        try {
+          await Local.saveRequestsLocal(remoteRequests);
+        } catch (saveError) {
+        }
+      } catch (error) {
+      }
+    }
+    
+    return await Local.getUserRequestsLocal(userId, filter);
+  },
+
+  approveRequest: async (requestId: string, notes?: string): Promise<void> => {
+    await Local.updateRequestStatusLocal(requestId, 'approved', notes);
+    
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (netState.isConnected && session) {
+      try {
+        await Remote.approveRequestRemote(requestId, notes);
+        SyncWorker.processQueue().catch(() => {});
+      } catch (error) {
+        await SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes });
+      }
+    } else {
+      await SyncQueue.enqueue('APPROVE_REQUEST', { requestId, notes });
+    }
+  },
+
+  rejectRequest: async (requestId: string, notes?: string): Promise<void> => {
+    await Local.updateRequestStatusLocal(requestId, 'rejected', notes);
+    
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (netState.isConnected && session) {
+      try {
+        await Remote.rejectRequestRemote(requestId, notes);
+        SyncWorker.processQueue().catch(() => {});
+      } catch (error) {
+        await SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes });
+      }
+    } else {
+      await SyncQueue.enqueue('REJECT_REQUEST', { requestId, notes });
     }
   },
 };
