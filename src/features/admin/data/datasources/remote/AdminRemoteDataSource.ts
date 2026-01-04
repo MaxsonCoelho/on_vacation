@@ -218,6 +218,46 @@ export const updateUserStatusRemote = async (userId: string, status: 'active' | 
   }
 };
 
+export const updateProfileRemote = async (
+  userId: string,
+  role: 'Colaborador' | 'Gestor' | 'Administrador',
+  department?: string,
+  position?: string,
+  phone?: string
+): Promise<void> => {
+  const updateData: {
+    role: string;
+    department?: string | null;
+    position?: string | null;
+    phone?: string | null;
+    updated_at: string;
+  } = {
+    role,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Só atualiza campos se foram fornecidos (não vazios)
+  if (department !== undefined) {
+    updateData.department = department && department.trim() !== '' ? department.trim() : null;
+  }
+  if (position !== undefined) {
+    updateData.position = position && position.trim() !== '' ? position.trim() : null;
+  }
+  if (phone !== undefined) {
+    updateData.phone = phone && phone.trim() !== '' ? phone.trim() : null;
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('id', userId);
+
+  if (error) {
+    console.error('[AdminRemoteDataSource] Error updating profile:', error);
+    throw error;
+  }
+};
+
 interface VacationRequestDB {
   id: string;
   user_id: string;

@@ -10,6 +10,7 @@ import { getUsersUseCase } from '../../domain/useCases/GetUsersUseCase';
 import { approveUserUseCase } from '../../domain/useCases/ApproveUserUseCase';
 import { rejectUserUseCase } from '../../domain/useCases/RejectUserUseCase';
 import { updateUserStatusUseCase } from '../../domain/useCases/UpdateUserStatusUseCase';
+import { updateProfileUseCase } from '../../domain/useCases/UpdateProfileUseCase';
 import { getUserRequestsUseCase } from '../../domain/useCases/GetUserRequestsUseCase';
 import { approveRequestUseCase } from '../../domain/useCases/ApproveRequestUseCase';
 import { rejectRequestUseCase } from '../../domain/useCases/RejectRequestUseCase';
@@ -33,6 +34,13 @@ interface AdminState {
   approveUser: (userId: string) => Promise<void>;
   rejectUser: (userId: string) => Promise<void>;
   updateUserStatus: (userId: string, status: 'active' | 'inactive') => Promise<void>;
+  updateProfile: (
+    userId: string,
+    role: 'Colaborador' | 'Gestor' | 'Administrador',
+    department?: string,
+    position?: string,
+    phone?: string
+  ) => Promise<void>;
   approveRequest: (requestId: string, notes?: string) => Promise<void>;
   rejectRequest: (requestId: string, notes?: string) => Promise<void>;
   subscribeToRealtime: () => void;
@@ -216,6 +224,40 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('[AdminStore] Error updating user status:', errorMessage);
+      set({ error: errorMessage, isLoading: false });
+      throw error;
+    }
+  },
+
+  updateProfile: async (
+    userId: string,
+    role: 'Colaborador' | 'Gestor' | 'Administrador',
+    department?: string,
+    position?: string,
+    phone?: string
+  ) => {
+    set({ isLoading: true, error: null });
+    try {
+      const updateProfile = updateProfileUseCase(AdminRepositoryImpl);
+      await updateProfile(userId, role, department, position, phone);
+      
+      const currentUsers = get().users;
+      const updatedUsers = currentUsers.map(u => 
+        u.id === userId 
+          ? { 
+              ...u, 
+              role, 
+              department: department || u.department,
+              position: position || u.position,
+              phone: phone || u.phone
+            } 
+          : u
+      );
+      set({ users: updatedUsers, isLoading: false });
+      
+      get().fetchReports(false).catch(() => {});
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       set({ error: errorMessage, isLoading: false });
       throw error;
     }

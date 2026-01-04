@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Alert } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { 
   ScreenContainer, 
@@ -35,7 +35,30 @@ type RouteProp = {
 export const AdminUserDetailsScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { userId, name, email, role, status, createdAt } = route.params || {
+  const { updateUserStatus, isLoading, fetchUsers, users } = useAdminStore();
+  
+  // Busca dados atualizados do store quando a tela recebe foco
+  useFocusEffect(
+    useCallback(() => {
+      fetchUsers(undefined, false).catch(() => {});
+    }, [fetchUsers])
+  );
+
+  // Usa dados do store se disponível, senão usa dos params
+  const storeUser = users.find(u => u.id === route.params?.userId);
+  const displayData = storeUser ? {
+    userId: storeUser.id,
+    name: storeUser.name,
+    email: storeUser.email,
+    role: storeUser.role,
+    status: storeUser.status === 'active' ? 'Ativo' : 'Inativo',
+    createdAt: route.params?.createdAt || 'Data não disponível',
+    department: storeUser.department,
+    position: storeUser.position,
+    phone: storeUser.phone,
+  } : route.params;
+
+  const { userId, name, email, role, status, createdAt } = displayData || {
     userId: '',
     name: 'Ricardo Almeida',
     email: 'ricardo.almeida@email.com',
@@ -43,8 +66,6 @@ export const AdminUserDetailsScreen = () => {
     status: 'Ativo',
     createdAt: '15 de março de 2023',
   };
-  
-  const { updateUserStatus, isLoading } = useAdminStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [toast, setToast] = useState<ToastProps>({
     visible: false,
@@ -56,7 +77,13 @@ export const AdminUserDetailsScreen = () => {
   const isActive = status === 'Ativo' || status === 'active';
 
   const handleChangeProfile = () => {
-    // TODO: Implementar alteração de perfil
+    navigation.navigate('UpdateProfile', {
+      userId,
+      currentRole: role,
+      currentDepartment: displayData?.department,
+      currentPosition: displayData?.position,
+      currentPhone: displayData?.phone,
+    });
   };
 
   const handleDeactivateUser = () => {
@@ -212,37 +239,37 @@ export const AdminUserDetailsScreen = () => {
           </Text>
           <View style={styles.separator} />
           
-          {route.params?.department || route.params?.position || route.params?.phone ? (
+          {(displayData?.department || displayData?.position || displayData?.phone) ? (
             <>
-              {route.params?.department && (
+              {displayData?.department && (
                 <View style={styles.infoRow}>
                   <Text variant="body" color="text.secondary" style={styles.infoLabel}>
                     Departamento
                   </Text>
                   <Text variant="caption" weight="bold">
-                    {route.params.department}
+                    {displayData.department}
                   </Text>
                 </View>
               )}
 
-              {route.params?.position && (
+              {displayData?.position && (
                 <View style={styles.infoRow}>
                   <Text variant="body" color="text.secondary" style={styles.infoLabel}>
                     Cargo
                   </Text>
                   <Text variant="caption" weight="bold">
-                    {route.params.position}
+                    {displayData.position}
                   </Text>
                 </View>
               )}
 
-              {route.params?.phone && (
+              {displayData?.phone && (
                 <View style={styles.infoRow}>
                   <Text variant="body" color="text.secondary" style={styles.infoLabel}>
                     Telefone
                   </Text>
                   <Text variant="caption" weight="bold">
-                    {route.params.phone}
+                    {displayData.phone}
                   </Text>
                 </View>
               )}

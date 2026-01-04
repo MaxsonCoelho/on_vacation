@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HeaderTitle, HeaderBackButton } from '../../../../core/design-system';
-import { AdminUsersScreen, AdminUserDetailsScreen, AdminUserRequestsScreen, AdminUserRequestAnalysisScreen } from '../../../../features/admin/presentation/screens';
+import { AdminUsersScreen, AdminUserDetailsScreen, AdminUserRequestsScreen, AdminUserRequestAnalysisScreen, UpdateProfileScreen } from '../../../../features/admin/presentation/screens';
 
 export type AdminUsersStackParamList = {
   AdminUsers: undefined;
@@ -24,6 +24,13 @@ export type AdminUsersStackParamList = {
     id: string;
     userId: string;
     userName: string;
+  };
+  UpdateProfile: {
+    userId: string;
+    currentRole: string;
+    currentDepartment?: string;
+    currentPosition?: string;
+    currentPhone?: string;
   };
 };
 
@@ -75,6 +82,17 @@ export const AdminUsersStack: React.FC = () => {
         options={({ navigation }) => ({
           headerShown: true,
           headerTitle: () => <HeaderTitle title="Análise da Solicitação" />,
+          headerLeft: () => (
+            <HeaderBackButton onPress={() => navigation.goBack()} />
+          ),
+        })}
+      />
+      <Stack.Screen 
+        name="UpdateProfile" 
+        component={UpdateProfileScreen} 
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: () => <HeaderTitle title="Atualizar Perfil" />,
           headerLeft: () => (
             <HeaderBackButton onPress={() => navigation.goBack()} />
           ),

@@ -10,6 +10,13 @@ export interface AdminRepository {
   approveUser: (userId: string) => Promise<void>;
   rejectUser: (userId: string) => Promise<void>;
   updateUserStatus: (userId: string, status: 'active' | 'inactive') => Promise<void>;
+  updateProfile: (
+    userId: string,
+    role: 'Colaborador' | 'Gestor' | 'Administrador',
+    department?: string,
+    position?: string,
+    phone?: string
+  ) => Promise<void>;
   getUserRequests: (userId: string, filter?: string) => Promise<TeamRequest[]>;
   approveRequest: (requestId: string, notes?: string) => Promise<void>;
   rejectRequest: (requestId: string, notes?: string) => Promise<void>;

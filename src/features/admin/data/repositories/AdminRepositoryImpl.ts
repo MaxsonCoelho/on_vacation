@@ -277,6 +277,28 @@ export const AdminRepositoryImpl: AdminRepository = {
     }
   },
 
+  updateProfile: async (
+    userId: string,
+    role: 'Colaborador' | 'Gestor' | 'Administrador',
+    department?: string,
+    position?: string,
+    phone?: string
+  ): Promise<void> => {
+    const netState = await NetInfo.fetch();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (netState.isConnected && session) {
+      try {
+        await Remote.updateProfileRemote(userId, role, department, position, phone);
+        SyncWorker.processQueue().catch(() => {});
+      } catch (error) {
+        throw error;
+      }
+    } else {
+      throw new Error('Sem conexão com a internet');
+    }
+  },
+
   getUserRequests: async (userId: string, filter?: string): Promise<TeamRequest[]> => {
     const netState = await NetInfo.fetch();
     const { data: { session } } = await supabase.auth.getSession();
