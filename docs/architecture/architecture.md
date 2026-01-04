@@ -233,22 +233,40 @@ Responsável por abstrair bibliotecas externas em funções próprias do projeto
 - Cada biblioteca possui seu próprio arquivo de facade
 - Facades são uma camada de abstração que encapsula chamadas a bibliotecas externas
 - Exemplos implementados:
-  - `storage.facade.ts` → AsyncStorage
+  - `StorageFacade.ts` → Interface de abstração para operações de armazenamento
+    - `AsyncStorageFacade.ts` → Implementação usando AsyncStorage
+    - `SupabaseStorageAdapter.ts` → Adapter que adapta StorageFacade para formato esperado pelo Supabase Auth
   - `database.facade.ts` → abstração de banco de dados
   - `sqlite.facade.ts` → SQLite específico (operações de sessão e reset para testes)
   - `HttpFacade.ts` → abstração de requisições HTTP (fetch)
+
+**StorageFacade Pattern:**
+O projeto implementa um padrão de facade para abstração de storage:
+
+1. **`StorageFacade` (Interface):**
+   - Define contrato: `get(key)`, `set(key, value)`, `remove(key)`
+   - Permite trocar implementação sem impactar código consumidor
+
+2. **`AsyncStorageFacade` (Implementação):**
+   - Implementa `StorageFacade` usando AsyncStorage
+   - Isola AsyncStorage em um único ponto
+
+3. **`SupabaseStorageAdapter` (Adapter):**
+   - Adapta `StorageFacade` para formato esperado pelo Supabase Auth (`getItem`, `setItem`, `removeItem`)
+   - Evita acoplar Supabase à interface interna da Facade
+   - Mantém separação de responsabilidades
+
+**Benefícios:**
+- ✅ Nenhum import direto de `@react-native-async-storage/async-storage` fora do core
+- ✅ Fácil migração futura para SecureStore sem refatorar código
+- ✅ Isolamento de dependências externas
+- ✅ Facilita testes com mocks
 
 **Decisão Arquitetural:**
 - **Não todas as bibliotecas foram abstraídas em facades** - isso seria muito trabalhoso e custoso em tempo
 - Apenas algumas foram abstraídas como **demonstração de como poderia ser feito** para todas as libs
 - Bibliotecas como `@react-navigation`, `@supabase`, `@react-native-community/netinfo`, `zustand`, `flash-list` são usadas diretamente onde necessário
 - O padrão de facade é aplicado onde faz sentido estratégico (persistência, HTTP, storage)
-
-**Benefícios quando aplicado:**
-- Permite trocar qualquer biblioteca alterando apenas o arquivo de facade
-- Facilita testes com mocks
-- Isola dependências externas do domínio
-- Reduz acoplamento com bibliotecas específicas
 
 **Por quê:** Demonstra conhecimento de padrões de design e preparação para evolução futura, sem comprometer prazos. Em um projeto maior, todas as libs críticas seriam abstraídas seguindo este padrão.
 
@@ -348,6 +366,8 @@ O sistema de fila é o coração da sincronização offline, garantindo que toda
    - `APPROVE_USER`: Aprova cadastro de usuário (Admin)
    - `REJECT_USER`: Rejeita cadastro de usuário (Admin)
    - `UPDATE_USER_STATUS`: Atualiza status de usuário (Admin)
+   - `UPDATE_PROFILE`: Atualiza perfil de usuário (Admin)
+     - Permite alterar role e informações adicionais (departamento, cargo, telefone)
 
    **Robustez:**
    - Evita race conditions verificando conexão/sessão uma vez antes do loop
@@ -445,10 +465,17 @@ Provider React que orquestra toda a sincronização:
 
 Contém funções utilitárias puras:
 - `date.ts` - Formatação e manipulação de datas
-- `masks.ts` - Máscaras de formatação (CPF, telefone, etc.)
+- `masks.ts` - Máscaras de formatação
+  - `phoneMask` - Máscara para telefones brasileiros (formato: (XX) XXXXX-XXXX)
 - `uuid.ts` - Geração de UUIDs
 
 **Decisão:** permitir apenas funções puras. **Por quê:** melhora previsibilidade e testabilidade.
+
+**Máscaras:**
+As máscaras são aplicadas em campos de formulário para formatação automática durante a digitação:
+- `phoneMask`: Aplicada no campo de telefone do cadastro e atualização de perfil
+- Integração com `ControlledFormField` do design system
+- Formatação automática sem necessidade de intervenção do usuário
 
 ### core/types
 
@@ -489,10 +516,14 @@ features/<feature-name>/
 ```
 
 **Features atuais:**
-- `auth` - Autenticação e gerenciamento de sessão
+- `auth` - Autenticação, cadastro e gerenciamento de sessão
+  - Login com validação de status do usuário
+  - Cadastro de novos usuários com informações adicionais
+  - Recuperação de senha
+  - Gerenciamento de sessão e persistência
 - `collaborator` - Funcionalidades do colaborador (solicitar férias, perfil, histórico)
 - `manager` - Funcionalidades do gestor (aprovações, equipe)
-- `admin` - Funcionalidades do administrador (gerenciamento de usuários)
+- `admin` - Funcionalidades do administrador (gerenciamento de usuários, aprovação de cadastros, atualização de perfis)
 
 **Decisão:** padronizar a estrutura das features. **Por quê:** facilita leitura, manutenção e onboarding.
 
@@ -594,6 +625,41 @@ const result = await login(email, password);
 
 **Decisão:** navegação fora das features. **Por quê:** navegação é infraestrutura, não domínio. Facilita gerenciamento de rotas e guards.
 
+### Fluxos de Autenticação e Cadastro
+
+**Stack de Autenticação:**
+- **RoleSelection** (Seleção de Perfil)
+  - Permite escolher perfil antes do login: Colaborador, Gestor, Administrador
+  - Navegação: RoleSelection → Login, RoleSelection → Register
+  
+- **Login** (Login)
+  - Formulário de login com email e senha
+  - Validação Zod (`loginSchema`)
+  - Feedback visual para usuários pendentes
+  - Botão "Esqueceu sua senha?" (navega para ForgotPassword)
+  - Botão "Não tem conta? Cadastre-se" (navega para Register)
+  - Validação de status do usuário (bloqueia login se status 'pending' ou 'inactive')
+  
+- **Register** (Cadastro)
+  - Formulário completo de cadastro com validação Zod (`registerSchema`)
+  - Campos obrigatórios: nome, email, senha, confirmação de senha
+  - Campos opcionais: departamento, cargo, telefone
+  - Máscara de telefone para formatação automática (`phoneMask`)
+  - Validações:
+    - Email: máximo 40 caracteres
+    - Nome: máximo 40 caracteres
+    - Senha: máximo 10 caracteres
+    - Departamento: máximo 25 caracteres
+    - Cargo: máximo 40 caracteres
+    - Telefone: máximo 25 caracteres
+  - Usuários criados com status 'pending' aguardando aprovação do admin
+  - Feedback visual com `FeedbackBottomSheet`
+  - Navegação para Login após cadastro bem-sucedido
+  
+- **ForgotPassword** (Recuperar Senha)
+  - Formulário para recuperação de senha
+  - Integração com Supabase Auth
+
 ### Fluxos de Navegação por Perfil
 
 #### 🔵 Perfil: Colaborador
@@ -644,6 +710,7 @@ const result = await login(email, password);
 - **Profile** (Perfil)
   - Informações do colaborador
   - Avatar, nome, email, role, departamento
+  - Informações adicionais: cargo, telefone (exibidas quando disponíveis)
   - Saldo de férias (simulado)
   - Botão para editar perfil
 
@@ -699,6 +766,7 @@ const result = await login(email, password);
 - **ManagerProfile** (Perfil)
   - Informações do gestor
   - Avatar, nome, email, role, departamento
+  - Informações adicionais: cargo, telefone (exibidas quando disponíveis)
   - Botão para editar perfil
 
 ---
@@ -735,7 +803,8 @@ const result = await login(email, password);
   
 - **RegistrationDetails** (Detalhes do Cadastro)
   - Detalhes completos do usuário pendente
-  - Informações: nome, email, role, departamento, cargo, telefone
+  - Informações: nome, email, role
+  - Informações adicionais: departamento, cargo, telefone (exibidas quando disponíveis)
   - Botões: Aprovar / Reprovar
   - Aprovação/rejeição offline-first (mesma estratégia do Manager)
   - Dialog customizado para confirmação (substitui Alert.alert)
@@ -753,12 +822,22 @@ const result = await login(email, password);
 - **UserDetails** (Detalhes do Usuário)
   - Informações completas do usuário
   - Avatar, nome, email, role, status, data de criação
+  - Informações adicionais: departamento, cargo, telefone (quando disponíveis)
   - Botões de ação:
     - **Solicitações**: Navega para lista de solicitações do usuário
-    - Alterar perfil
-    - Ativar/Desativar usuário
+    - **Alterar perfil**: Navega para tela de atualização de perfil
+    - **Ativar/Desativar usuário**
   - Ativação/desativação offline-first
-  - Navegação: UserDetails → UserRequests
+  - Navegação: UserDetails → UserRequests, UserDetails → UpdateProfile
+  
+- **UpdateProfile** (Atualizar Perfil)
+  - Permite alterar role (Colaborador, Gestor, Admin)
+  - Editar informações adicionais: departamento, cargo, telefone
+  - Formulário com validação Zod (`updateProfileSchema`)
+  - Máscara de telefone para formatação automática
+  - Feedback visual com `FeedbackBottomSheet`
+  - Atualização offline-first com sincronização automática
+  - Navegação de volta após atualização bem-sucedida
   
 - **UserRequests** (Solicitações do Usuário)
   - Lista todas as solicitações de um usuário específico
@@ -789,6 +868,7 @@ const result = await login(email, password);
 - **AdminProfile** (Perfil)
   - Informações do administrador
   - Avatar, nome, email, role
+  - Informações adicionais: departamento, cargo, telefone (exibidas quando disponíveis)
   - Botão para editar perfil
 
 ---
@@ -859,7 +939,21 @@ const result = await login(email, password);
   - Campos: id, user_id, title, start_date, end_date, status, collaborator_notes, manager_notes, created_at, updated_at, requester_name, requester_avatar
 - `admin_reports` - Cache de relatórios do admin
 - `admin_pending_users` - Cache de usuários pendentes
+  - Campos: id, email, name, role, status, created_at, department, position, phone
 - `admin_users` - Cache de usuários ativos
+  - Campos: id, email, name, role, status, created_at, department, position, phone
+
+**Informações Adicionais de Perfil:**
+O sistema suporta informações adicionais opcionais nos perfis de usuário:
+- `department` (departamento) - Campo de texto, máximo 25 caracteres
+- `position` (cargo) - Campo de texto, máximo 40 caracteres
+- `phone` (telefone) - Campo de texto com máscara, máximo 25 caracteres
+
+Essas informações são:
+- Opcionais no cadastro de novos usuários
+- Editáveis pelo administrador na tela de atualização de perfil
+- Exibidas nas telas de perfil quando disponíveis
+- Armazenadas na tabela `profiles` do Supabase e cacheadas localmente
 
 **Mapeamento Remoto ↔ Local:**
 - Datasources remotos buscam do PostgreSQL (Supabase)
@@ -872,16 +966,48 @@ const result = await login(email, password);
 ## 🧪 Testes
 
 **Estratégia:**
-- **UseCases:** testes unitários puros (fácil devido ao paradigma funcional)
-- **Facades:** testes com mocks
-- **Repositories:** testes de integração com mocks de datasources
-- **Persistência:** testes isolados com banco em memória
+O projeto utiliza **exclusivamente testes de integração** que validam o fluxo completo das funcionalidades, desde a camada de apresentação até a persistência.
+
+**Por que apenas testes de integração?**
+- ✅ Validam o comportamento real do sistema end-to-end
+- ✅ Testam integração entre camadas (UI → UseCase → Repository → Datasource)
+- ✅ Garantem que a lógica de negócio funciona corretamente com dependências reais
+- ✅ Use cases são funções puras e facilmente testáveis sem mocks complexos
+
+**Features com testes de integração:**
+- `auth/tests/auth.integration.test.ts` - Autenticação e sessão
+  - Testa login com credenciais reais
+  - Valida persistência de sessão
+  - Verifica restauração de sessão após reinicialização
+  - Testa logout e limpeza de sessão
+  
+- `collaborator/tests/vacation.integration.test.ts` - Solicitações de férias
+  - Testa criação de solicitações
+  - Valida cache local e sincronização remota
+  - Testa estratégia offline-first
+  
+- `manager/tests/manager.integration.test.ts` - Aprovações e gestão de equipe
+  - Testa listagem de solicitações da equipe
+  - Valida aprovação/rejeição de solicitações
+  - Testa sincronização offline
+  
+- `admin/tests/admin.integration.test.ts` - Gerenciamento de usuários e relatórios
+  - Testa listagem de usuários
+  - Valida aprovação/rejeição de cadastros pendentes
+  - Testa atualização de perfis de usuário
+  - Valida geração de relatórios
 
 **Ferramentas:**
 - Jest
 - @testing-library/react-native
 
-**Decisão:** priorizar testes de regras. **Por quê:** maior retorno de valor com menor esforço. Use cases são fáceis de testar por serem funções puras.
+**Setup de Testes:**
+- Mock de AsyncStorage para isolamento
+- Reset de banco de dados antes de cada teste (`_test_resetDB()`)
+- Setup e teardown de autenticação para testes que requerem sessão
+- Limpeza de recursos criados durante testes (após cada teste e após todos)
+
+**Decisão:** focar em testes de integração end-to-end. **Por quê:** garantem que o sistema funciona corretamente como um todo, validando integrações entre camadas e comportamento real. Use cases são fáceis de testar por serem funções puras, e testes de integração dão maior confiança no comportamento do sistema completo.
 
 ## 🏁 Conclusão
 

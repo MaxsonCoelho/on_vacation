@@ -271,15 +271,20 @@ features/<feature-name>/
 
 ## 👥 Perfis de Usuário e Fluxos
 
-### ⚠️ Observação sobre Cadastro de Usuários
+### 👤 Cadastro e Gerenciamento de Usuários
 
-O cadastro de novos usuários **não foi implementado na UI do aplicativo**. Os usuários são injetados diretamente no banco de dados (Supabase) via scripts SQL. Esta decisão foi tomada considerando que:
+**Cadastro de Novos Usuários:**
+- ✅ Tela de cadastro completa (`RegisterScreen`) com validação Zod
+- ✅ Campos: nome, email, senha e informações adicionais (departamento, cargo, telefone)
+- ✅ Máscara de telefone para formatação automática
+- ✅ Sistema de aprovação: usuários ficam com status "pending" até aprovação do admin
+- ✅ Validações: email máximo 40 caracteres, nome máximo 40 caracteres, senha máximo 10 caracteres
 
-- O cadastro inicial de usuários é tipicamente feito por administradores do sistema
-- A inserção via SQL permite maior controle e validação dos dados
-- Simplifica o fluxo da aplicação focando nas funcionalidades principais
-
-Administradores podem gerenciar usuários existentes (ativar/desativar, visualizar, aprovar cadastros pendentes) através da interface, mas a criação inicial é feita diretamente no banco de dados.
+**Gerenciamento pelo Admin:**
+- ✅ Visualizar cadastros pendentes
+- ✅ Aprovar/reprovar cadastros
+- ✅ Atualizar perfil de usuários: role (perfil) e informações adicionais
+- ✅ Ativar/desativar usuários existentes
 
 ### 🔵 Perfil: Colaborador
 
@@ -353,8 +358,15 @@ Administradores podem gerenciar usuários existentes (ativar/desativar, visualiz
   - Busca por nome/email
   - Detalhes do usuário:
     - Visualizar solicitações do usuário
+    - Visualizar informações adicionais (departamento, cargo, telefone)
     - Ativar/Desativar usuário
-    - Alterar perfil
+    - Navegar para tela de atualização de perfil
+
+- **Atualizar Perfil de Usuário**:
+  - Permite alterar role (Colaborador, Gestor, Admin)
+  - Editar informações adicionais: departamento, cargo, telefone
+  - Validação completa com feedback visual
+  - Atualização offline-first com sincronização automática
 
 - **Relatórios**:
   - Dashboard com métricas detalhadas
@@ -379,41 +391,111 @@ Administradores podem gerenciar usuários existentes (ativar/desativar, visualiz
 - **Jest**: Framework de testes
 - **@testing-library/react-native**: Testes de componentes React Native
 
-### Estratégia
+### Estratégia de Testes
 
-**Foco em:**
-- ✅ **UseCases**: Testes unitários puros (fácil devido ao paradigma funcional)
-- ✅ **Repositórios**: Testes de integração com mocks de datasources
-- ✅ **Regras de domínio**: Testes isolados de lógica de negócio
-- ✅ **Facades**: Testes com mocks de bibliotecas externas
-- ✅ **Persistência**: Testes isolados com banco em memória
+O projeto utiliza **exclusivamente testes de integração** que validam o fluxo completo das funcionalidades, desde a camada de apresentação até a persistência.
+
+**Por que apenas testes de integração?**
+- ✅ Validam o comportamento real do sistema end-to-end
+- ✅ Testam integração entre camadas (UI → UseCase → Repository → Datasource)
+- ✅ Garantem que a lógica de negócio funciona corretamente com dependências reais
+- ✅ Use cases são funções puras e facilmente testáveis sem mocks complexos
 
 **Features com testes de integração:**
-- `collaborator/tests/`
-- `manager/tests/`
-- `admin/tests/`
+- ✅ `auth/tests/auth.integration.test.ts` - Autenticação e sessão
+- ✅ `collaborator/tests/vacation.integration.test.ts` - Solicitações de férias
+- ✅ `manager/tests/manager.integration.test.ts` - Aprovações e gestão de equipe
+- ✅ `admin/tests/admin.integration.test.ts` - Gerenciamento de usuários e relatórios
 
-**Decisão:** Priorizar testes de regras de negócio. Use cases são fáceis de testar por serem funções puras. A UI permanece simples e desacoplada da lógica.
+**Executar testes:**
+```bash
+npm run test
+```
 
-🚀 Setup do Projeto
-Pré-requisitos
+## 🚀 Setup do Projeto
 
-Node.js (LTS)
+### Pré-requisitos
 
-Expo CLI
+- Node.js (LTS)
+- Expo CLI
+- npm ou yarn
 
-npm
+### Instalação
 
-Instalação
+```bash
 npm install
+```
 
-Rodar o projeto
-npx expo start
+### Variáveis de Ambiente
 
-🧰 Scripts Disponíveis
-npm run start     # Inicia o Expo
-npm run lint      # Executa ESLint
-npm run test      # Executa testes
+Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anon
+```
+
+### Rodar o Projeto
+
+```bash
+npm run start
+```
+
+### 🧰 Scripts Disponíveis
+
+- `npm run start` - Inicia o Expo
+- `npm run android` - Executa no Android
+- `npm run ios` - Executa no iOS
+- `npm run test` - Executa testes de integração
+- `npm run lint` - Executa ESLint
+
+## 📱 Build e Distribuição
+
+### Gerar APK para Android
+
+O projeto está configurado com **EAS Build** para geração de APKs na nuvem.
+
+**Pré-requisitos:**
+- Conta na Expo (gratuita): https://expo.dev
+- EAS CLI instalado: `npm install -g eas-cli`
+
+**Comandos:**
+
+```bash
+# 1. Login na Expo (primeira vez)
+eas login
+
+# 2. Configurar projeto (primeira vez)
+eas build:configure
+
+# 3. Gerar APK de preview (teste)
+eas build --platform android --profile preview
+
+# 4. Gerar APK de produção
+eas build --platform android --profile production
+```
+
+**Perfis de Build (configurados em `eas.json`):**
+- **preview**: APK para testes internos (distribuição manual)
+- **production**: APK de produção
+- **development**: Para desenvolvimento com Expo Dev Client
+
+**Build Local (Alternativa):**
+
+```bash
+# Gerar projeto Android nativo
+npx expo prebuild --platform android
+
+# Build APK localmente
+npx expo run:android --variant release
+```
+
+O APK será gerado em: `android/app/build/outputs/apk/release/app-release.apk`
+
+**Dicas:**
+- Incremente `versionCode` no `app.json` antes de cada build de produção
+- Para produção, configure keystore no EAS (primeiro build pedirá)
+- Variáveis de ambiente do `.env` são automaticamente incluídas no build
 
 ## 📐 Padrões de Código
 
@@ -450,6 +532,8 @@ npm run test      # Executa testes
 
 - ✅ ~~Sincronização online/offline~~ (Implementado)
 - ✅ ~~Cache inteligente~~ (Implementado)
+- ✅ ~~Cadastro de usuários na UI~~ (Implementado)
+- ✅ ~~Atualização de perfil de usuário~~ (Implementado)
 - Feature flags
 - Observabilidade (logs, analytics)
 - Testes end-to-end
